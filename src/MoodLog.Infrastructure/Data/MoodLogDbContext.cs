@@ -7,6 +7,8 @@ public sealed class MoodLogDbContext(DbContextOptions<MoodLogDbContext> options)
 {
     public DbSet<MoodEntry> MoodEntries => Set<MoodEntry>();
     public DbSet<WaterLog> WaterLogs => Set<WaterLog>();
+    public DbSet<SleepLog> SleepLogs => Set<SleepLog>();
+    public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

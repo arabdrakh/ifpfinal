@@ -105,4 +105,37 @@ public class SqlitePersistenceTests
 
         Assert.Equal(requestedLog.Id, Assert.Single(logs).Id);
     }
+
+    [Fact]
+    public async Task SaveChanges_ShouldPersistSleepAndActivityLogs()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<MoodLogDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        var date = new DateOnly(2026, 11, 13);
+        var sleepLog = SleepLog.Create(date, new TimeOnly(23, 0), new TimeOnly(7, 0)).Value;
+        var activityLog = ActivityLog.Create(date, ActivityType.Walking, 35, 4200).Value;
+
+        await using (var context = new MoodLogDbContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+            context.SleepLogs.Add(sleepLog);
+            context.ActivityLogs.Add(activityLog);
+            await context.SaveChangesAsync();
+        }
+
+        await using (var context = new MoodLogDbContext(options))
+        {
+            var savedSleep = await context.SleepLogs.SingleAsync();
+            var savedActivity = await context.ActivityLogs.SingleAsync();
+
+            Assert.Equal(8 * 60, savedSleep.DurationMinutes);
+            Assert.Equal(ActivityType.Walking, savedActivity.Type);
+            Assert.Equal(4200, savedActivity.Steps);
+        }
+    }
 }

@@ -20,8 +20,12 @@ public static class DependencyInjection
             options.UseSqlite(connectionString));
         services.AddScoped<IMoodEntryRepository, EfMoodEntryRepository>();
         services.AddScoped<IWaterLogRepository, EfWaterLogRepository>();
+        services.AddScoped<ISleepLogRepository, EfSleepLogRepository>();
+        services.AddScoped<IActivityLogRepository, EfActivityLogRepository>();
         services.AddScoped<MoodJournalService>();
         services.AddScoped<WaterTrackerService>();
+        services.AddScoped<SleepTrackerService>();
+        services.AddScoped<ActivityTrackerService>();
 
         return services;
     }

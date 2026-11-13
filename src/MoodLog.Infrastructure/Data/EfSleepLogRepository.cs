@@ -1,0 +1,23 @@
+using Microsoft.EntityFrameworkCore;
+using MoodLog.Core.Interfaces;
+using MoodLog.Core.Models;
+
+namespace MoodLog.Infrastructure.Data;
+
+public sealed class EfSleepLogRepository(MoodLogDbContext dbContext) : ISleepLogRepository
+{
+    public async Task AddAsync(SleepLog log, CancellationToken cancellationToken = default)
+    {
+        await dbContext.SleepLogs.AddAsync(log, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<SleepLog>> GetForDateAsync(
+        DateOnly date,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.SleepLogs
+            .AsNoTracking()
+            .Where(log => log.Date == date)
+            .OrderByDescending(log => log.LoggedAt)
+            .ToListAsync(cancellationToken);
+}
