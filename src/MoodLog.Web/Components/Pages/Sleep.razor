@@ -1,0 +1,113 @@
+﻿@page "/sleep"
+@using MoodLog.Core.Models
+@using MoodLog.Core.Services
+@inject SleepTrackerService SleepTracker
+
+<PageTitle>Sleep tracker | MoodLog</PageTitle>
+
+<main class="tracker-page">
+    <header class="tracker-header">
+        <div>
+            <p class="tracker-eyebrow">REST & RECOVERY</p>
+            <h1>Sleep tracker</h1>
+            <p class="tracker-subtitle">Notice your sleep patterns without pressure or judgment.</p>
+        </div>
+        <label class="tracker-date-label" for="sleep-date">
+            <span>Sleep date</span>
+            <InputDate id="sleep-date" class="form-control tracker-control"
+                       @bind-Value="_date" @bind-Value:after="LoadEntriesAsync" />
+        </label>
+    </header>
+
+    <div class="tracker-columns">
+        <section class="tracker-card" aria-labelledby="sleep-form-title">
+            <h2 id="sleep-form-title">Log a night's sleep</h2>
+            <p class="tracker-muted">Enter the time you went to bed and woke up.</p>
+
+            <EditForm Model="_form" OnSubmit="SaveAsync">
+                <label class="form-label" for="sleep-bedtime">Bedtime</label>
+                <InputDate id="sleep-bedtime" Type="InputDateType.Time"
+                           class="form-control tracker-control" @bind-Value="_form.Bedtime" />
+
+                <label class="form-label mt-3" for="sleep-waketime">Wake-up time</label>
+                <InputDate id="sleep-waketime" Type="InputDateType.Time"
+                           class="form-control tracker-control" @bind-Value="_form.WakeTime" />
+
+                <p class="tracker-hint">Overnight sleep is calculated automatically. Entries over 16 hours are not accepted.</p>
+                <button class="btn tracker-submit mt-3" type="submit">Save sleep</button>
+            </EditForm>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <p class="tracker-feedback" role="status">@_message</p>
+            }
+        </section>
+
+        <section class="tracker-card" aria-labelledby="sleep-history-title">
+            <div class="tracker-section-heading">
+                <div>
+                    <h2 id="sleep-history-title">Sleep history</h2>
+                    <p class="tracker-muted">@_date.ToString("MMMM d, yyyy")</p>
+                </div>
+                <span class="tracker-count">@_entries.Count</span>
+            </div>
+
+            @if (_entries.Count == 0)
+            {
+                <p class="tracker-empty">No sleep logged for this date yet.</p>
+            }
+            else
+            {
+                <ul class="tracker-list">
+                    @foreach (var entry in _entries)
+                    {
+                        <li>
+                            <span class="tracker-icon" aria-hidden="true">🌙</span>
+                            <div class="tracker-list-main">
+                                <strong>@FormatDuration(entry.DurationMinutes)</strong>
+                                <span>@entry.Bedtime.ToString("h:mm tt") – @entry.WakeTime.ToString("h:mm tt")</span>
+                            </div>
+                            <time datetime="@entry.LoggedAt.ToString("O")">@entry.LoggedAt.ToLocalTime().ToString("h:mm tt")</time>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+</main>
+
+@code {
+    private DateOnly _date = DateOnly.FromDateTime(DateTime.Today);
+    private IReadOnlyList<SleepLog> _entries = [];
+    private SleepForm _form = new();
+    private string? _message;
+
+    protected override Task OnInitializedAsync() => LoadEntriesAsync();
+
+    private async Task SaveAsync()
+    {
+        var result = await SleepTracker.AddAsync(_date, _form.Bedtime, _form.WakeTime);
+        if (result.IsFailure)
+        {
+            _message = result.Error.Message;
+            return;
+        }
+
+        _message = $"Sleep logged: {FormatDuration(result.Value.DurationMinutes)}.";
+        await LoadEntriesAsync();
+    }
+
+    private async Task LoadEntriesAsync()
+    {
+        _entries = await SleepTracker.GetForDateAsync(_date);
+    }
+
+    private static string FormatDuration(int minutes) =>
+        $"{minutes / 60}h {minutes % 60:D2}m";
+
+    private sealed class SleepForm
+    {
+        public TimeOnly Bedtime { get; set; } = new(22, 30);
+        public TimeOnly WakeTime { get; set; } = new(7, 0);
+    }
+}

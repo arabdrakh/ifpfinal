@@ -1,0 +1,151 @@
+﻿@page "/activity"
+@using MoodLog.Core.Models
+@using MoodLog.Core.Services
+@inject ActivityTrackerService ActivityService
+
+<PageTitle>Activity tracker | MoodLog</PageTitle>
+
+<main class="tracker-page">
+    <header class="tracker-header">
+        <div>
+            <p class="tracker-eyebrow">MOVEMENT & MOMENTUM</p>
+            <h1>Activity tracker</h1>
+            <p class="tracker-subtitle">Celebrate movement in a way that works for you.</p>
+        </div>
+        <label class="tracker-date-label" for="activity-date">
+            <span>Activity date</span>
+            <InputDate id="activity-date" class="form-control tracker-control"
+                       @bind-Value="_date" @bind-Value:after="LoadEntriesAsync" />
+        </label>
+    </header>
+
+    <div class="tracker-columns">
+        <section class="tracker-card" aria-labelledby="activity-form-title">
+            <h2 id="activity-form-title">Log an activity</h2>
+            <p class="tracker-muted">Record a workout, walk, or any movement.</p>
+
+            <EditForm Model="_form" OnSubmit="SaveAsync">
+                <label class="form-label" for="activity-type">Activity</label>
+                <InputSelect id="activity-type" class="form-select tracker-control" @bind-Value="_form.Type">
+                    @foreach (var type in Enum.GetValues<ActivityType>())
+                    {
+                        <option value="@type">@FormatType(type)</option>
+                    }
+                </InputSelect>
+
+                <label class="form-label mt-3" for="activity-duration">Duration</label>
+                <div class="input-group">
+                    <InputNumber id="activity-duration" class="form-control tracker-control"
+                                 @bind-Value="_form.DurationMinutes" min="1" max="1440" />
+                    <span class="input-group-text tracker-unit">minutes</span>
+                </div>
+
+                <label class="form-label mt-3" for="activity-steps">Steps <span class="tracker-muted">(optional)</span></label>
+                <InputNumber id="activity-steps" class="form-control tracker-control"
+                             @bind-Value="_form.Steps" min="0" max="100000" />
+                <p class="tracker-hint">Duration: 1–1440 minutes · Steps: up to 100000</p>
+
+                <button class="btn tracker-submit mt-3" type="submit">Save activity</button>
+            </EditForm>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <p class="tracker-feedback" role="status">@_message</p>
+            }
+        </section>
+
+        <section class="tracker-card" aria-labelledby="activity-summary-title">
+            <div class="tracker-section-heading">
+                <div>
+                    <h2 id="activity-summary-title">Today's movement</h2>
+                    <p class="tracker-muted">@_date.ToString("MMMM d, yyyy")</p>
+                </div>
+                <span class="tracker-count">@_entries.Count</span>
+            </div>
+
+            <div class="activity-summary">
+                <div><strong>@_totalMinutes</strong><span>active minutes</span></div>
+                <div><strong>@_totalSteps.ToString("N0")</strong><span>steps</span></div>
+            </div>
+
+            @if (_entries.Count == 0)
+            {
+                <p class="tracker-empty">Your activities will appear here.</p>
+            }
+            else
+            {
+                <ul class="tracker-list">
+                    @foreach (var entry in _entries)
+                    {
+                        <li>
+                            <span class="tracker-icon" aria-hidden="true">@GetIcon(entry.Type)</span>
+                            <div class="tracker-list-main">
+                                <strong>@FormatType(entry.Type)</strong>
+                                <span>@entry.DurationMinutes min · @entry.Steps.ToString("N0") steps</span>
+                            </div>
+                            <time datetime="@entry.LoggedAt.ToString("O")">@entry.LoggedAt.ToLocalTime().ToString("h:mm tt")</time>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+</main>
+
+@code {
+    private DateOnly _date = DateOnly.FromDateTime(DateTime.Today);
+    private IReadOnlyList<ActivityLog> _entries = [];
+    private ActivityForm _form = new();
+    private string? _message;
+
+    private int _totalMinutes => _entries.Sum(entry => entry.DurationMinutes);
+    private long _totalSteps => _entries.Sum(entry => (long)entry.Steps);
+
+    protected override Task OnInitializedAsync() => LoadEntriesAsync();
+
+    private async Task SaveAsync()
+    {
+        var result = await ActivityService.AddAsync(
+            _date,
+            _form.Type,
+            _form.DurationMinutes,
+            _form.Steps);
+        if (result.IsFailure)
+        {
+            _message = result.Error.Message;
+            return;
+        }
+
+        _message = "Activity saved.";
+        _form = new ActivityForm();
+        await LoadEntriesAsync();
+    }
+
+    private async Task LoadEntriesAsync()
+    {
+        _entries = await ActivityService.GetForDateAsync(_date);
+    }
+
+    private static string FormatType(ActivityType type) =>
+        type.ToString() switch
+        {
+            "Other" => "Other activity",
+            _ => type.ToString()
+        };
+
+    private static string GetIcon(ActivityType type) => type switch
+    {
+        ActivityType.Walking => "🚶",
+        ActivityType.Running => "🏃",
+        ActivityType.Cycling => "🚴",
+        ActivityType.Workout => "💪",
+        _ => "✨"
+    };
+
+    private sealed class ActivityForm
+    {
+        public ActivityType Type { get; set; } = ActivityType.Walking;
+        public int DurationMinutes { get; set; } = 30;
+        public int Steps { get; set; }
+    }
+}
