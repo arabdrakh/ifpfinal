@@ -16,7 +16,7 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("MoodLog")
             ?? "Data Source=moodlog.db";
 
-        services.AddDbContext<MoodLogDbContext>(options =>
+        services.AddDbContextFactory<MoodLogDbContext>(options =>
             options.UseSqlite(connectionString));
         services.AddScoped<IMoodEntryRepository, EfMoodEntryRepository>();
         services.AddScoped<IWaterLogRepository, EfWaterLogRepository>();

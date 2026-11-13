@@ -98,7 +98,7 @@ public class SqlitePersistenceTests
             MoodLevel.Good,
             null,
             null).Value;
-        var repository = new EfMoodEntryRepository(context);
+        var repository = new EfMoodEntryRepository(new TestDbContextFactory(options));
 
         await repository.AddAsync(olderEntry);
         await repository.AddAsync(newerEntry);
@@ -164,7 +164,7 @@ public class SqlitePersistenceTests
         var requestedDate = new DateOnly(2026, 11, 13);
         var requestedLog = WaterLog.Create(requestedDate, 300).Value;
         var otherDayLog = WaterLog.Create(requestedDate.AddDays(-1), 500).Value;
-        var repository = new EfWaterLogRepository(context);
+        var repository = new EfWaterLogRepository(new TestDbContextFactory(options));
 
         await repository.AddAsync(otherDayLog);
         await repository.AddAsync(requestedLog);
@@ -190,10 +190,11 @@ public class SqlitePersistenceTests
         await using (var context = new MoodLogDbContext(options))
         {
             await context.Database.EnsureCreatedAsync();
-            context.SleepLogs.Add(sleepLog);
-            context.ActivityLogs.Add(activityLog);
-            await context.SaveChangesAsync();
         }
+
+        var contextFactory = new TestDbContextFactory(options);
+        await new EfSleepLogRepository(contextFactory).AddAsync(sleepLog);
+        await new EfActivityLogRepository(contextFactory).AddAsync(activityLog);
 
         await using (var context = new MoodLogDbContext(options))
         {
@@ -218,7 +219,7 @@ public class SqlitePersistenceTests
 
         await using var context = new MoodLogDbContext(options);
         await context.Database.EnsureCreatedAsync();
-        var repository = new EfProfileSettingsRepository(context);
+        var repository = new EfProfileSettingsRepository(new TestDbContextFactory(options));
         var initial = ProfileSettings.Create("Alex", 2200, 480, 8000).Value;
         var updated = ProfileSettings.Create("Jordan", 2600, 510, 10000).Value;
 
@@ -232,5 +233,15 @@ public class SqlitePersistenceTests
         Assert.Equal(510, saved.DailySleepGoalMinutes);
         Assert.Equal(10000, saved.DailyStepGoal);
         Assert.Equal(1, await context.Profiles.CountAsync());
+    }
+
+    private sealed class TestDbContextFactory(DbContextOptions<MoodLogDbContext> options)
+        : IDbContextFactory<MoodLogDbContext>
+    {
+        public MoodLogDbContext CreateDbContext() => new(options);
+
+        public ValueTask<MoodLogDbContext> CreateDbContextAsync(
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(CreateDbContext());
     }
 }

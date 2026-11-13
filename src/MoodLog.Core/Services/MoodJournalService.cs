@@ -13,14 +13,12 @@ public sealed class MoodJournalService(IMoodEntryRepository repository)
         string? note,
         CancellationToken cancellationToken = default)
     {
-        var result = MoodEntry.Create(date, level, tags, note);
-        if (result.IsFailure)
-        {
-            return result;
-        }
-
-        await repository.AddAsync(result.Value, cancellationToken);
-        return result;
+        return await MoodEntry.Create(date, level, tags, note)
+            .BindAsync(async entry =>
+            {
+                await repository.AddAsync(entry, cancellationToken);
+                return Result<MoodEntry, DomainError>.Ok(entry);
+            });
     }
 
     public Task<IReadOnlyList<MoodEntry>> GetRecentAsync(

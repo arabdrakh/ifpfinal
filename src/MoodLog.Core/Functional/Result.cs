@@ -71,6 +71,16 @@ public abstract record Result<T, TError>
 
 public static class ResultExtensions
 {
+    public static async Task<Result<TNext, TError>> BindAsync<T, TError, TNext>(
+        this Result<T, TError> source,
+        Func<T, Task<Result<TNext, TError>>> bind) =>
+        source switch
+        {
+            Result<T, TError>.Success success => await bind(success.Data),
+            Result<T, TError>.Failure failure => Result<TNext, TError>.Fail(failure.ErrorDetail),
+            _ => throw new InvalidOperationException()
+        };
+
     public static Result<TNext, TError> Select<T, TError, TNext>(
         this Result<T, TError> source,
         Func<T, TNext> selector) =>

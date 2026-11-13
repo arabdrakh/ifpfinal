@@ -13,14 +13,12 @@ public sealed class ActivityTrackerService(IActivityLogRepository repository)
         int steps,
         CancellationToken cancellationToken = default)
     {
-        var result = ActivityLog.Create(date, type, durationMinutes, steps);
-        if (result.IsFailure)
-        {
-            return result;
-        }
-
-        await repository.AddAsync(result.Value, cancellationToken);
-        return result;
+        return await ActivityLog.Create(date, type, durationMinutes, steps)
+            .BindAsync(async log =>
+            {
+                await repository.AddAsync(log, cancellationToken);
+                return Result<ActivityLog, DomainError>.Ok(log);
+            });
     }
 
     public Task<IReadOnlyList<ActivityLog>> GetForDateAsync(

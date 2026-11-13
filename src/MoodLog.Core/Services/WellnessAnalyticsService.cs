@@ -21,7 +21,8 @@ public sealed class WellnessAnalyticsService(
         ArgumentOutOfRangeException.ThrowIfGreaterThan(days, 90);
 
         var startDate = endDate.AddDays(-(days - 1));
-        var dataStartDate = startDate.AddDays(-7);
+        var insightsStartDate = endDate.AddDays(-13);
+        var dataStartDate = startDate < insightsStartDate ? startDate : insightsStartDate;
         var moods = await moodRepository.GetForRangeAsync(dataStartDate, endDate, cancellationToken);
         var waterLogs = await waterRepository.GetForRangeAsync(dataStartDate, endDate, cancellationToken);
         var sleepLogs = await sleepRepository.GetForRangeAsync(dataStartDate, endDate, cancellationToken);

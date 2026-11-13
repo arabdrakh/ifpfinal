@@ -12,14 +12,12 @@ public sealed class SleepTrackerService(ISleepLogRepository repository)
         TimeOnly wakeTime,
         CancellationToken cancellationToken = default)
     {
-        var result = SleepLog.Create(date, bedtime, wakeTime);
-        if (result.IsFailure)
-        {
-            return result;
-        }
-
-        await repository.AddAsync(result.Value, cancellationToken);
-        return result;
+        return await SleepLog.Create(date, bedtime, wakeTime)
+            .BindAsync(async log =>
+            {
+                await repository.AddAsync(log, cancellationToken);
+                return Result<SleepLog, DomainError>.Ok(log);
+            });
     }
 
     public Task<IReadOnlyList<SleepLog>> GetForDateAsync(

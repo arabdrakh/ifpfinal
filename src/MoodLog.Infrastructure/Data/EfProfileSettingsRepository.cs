@@ -4,15 +4,20 @@ using MoodLog.Core.Models;
 
 namespace MoodLog.Infrastructure.Data;
 
-public sealed class EfProfileSettingsRepository(MoodLogDbContext dbContext) : IProfileSettingsRepository
+public sealed class EfProfileSettingsRepository(
+    IDbContextFactory<MoodLogDbContext> contextFactory) : IProfileSettingsRepository
 {
-    public Task<ProfileSettings?> GetAsync(CancellationToken cancellationToken = default) =>
-        dbContext.Profiles.AsNoTracking().SingleOrDefaultAsync(
+    public async Task<ProfileSettings?> GetAsync(CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.Profiles.AsNoTracking().SingleOrDefaultAsync(
             settings => settings.Id == ProfileSettings.Default.Id,
             cancellationToken);
+    }
 
     public async Task SaveAsync(ProfileSettings settings, CancellationToken cancellationToken = default)
     {
+        await using var dbContext = await contextFactory.CreateDbContextAsync(cancellationToken);
         var existing = await dbContext.Profiles.FindAsync(
             [ProfileSettings.Default.Id],
             cancellationToken);

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MoodLog.Web.Components;
 using MoodLog.Infrastructure;
 using MoodLog.Infrastructure.Data;
@@ -11,11 +12,9 @@ builder.Services.AddMoodLogInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<MoodLogDbContext>();
-    await DatabaseInitializer.InitializeAsync(dbContext);
-}
+var dbContextFactory = app.Services.GetRequiredService<IDbContextFactory<MoodLogDbContext>>();
+await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+await DatabaseInitializer.InitializeAsync(dbContext);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

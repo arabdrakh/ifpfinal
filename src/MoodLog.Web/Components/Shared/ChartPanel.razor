@@ -7,7 +7,9 @@
         @for (var index = 0; index < Values.Count; index++)
         {
             var value = Values[index];
-            <div class="chart-column" role="listitem" aria-label="@($"{Labels[index]}: {FormatValue(value)} {Unit}")">
+            <div class="chart-column" role="listitem"
+                 aria-label="@($"{Labels[index]}: {FormatValue(value)} {Unit}")"
+                 title="@($"{Labels[index]}: {FormatValue(value)} {Unit}")">
                 <div class="chart-bar-track">
                     <span class="chart-bar @Color" style="height: @GetHeight(value)%"></span>
                 </div>
@@ -37,14 +39,23 @@
     [Parameter, EditorRequired]
     public string Color { get; set; } = string.Empty;
 
-    private double Maximum => Values.Where(value => value.HasValue).Select(value => value!.Value)
+    [Parameter]
+    public double? ScaleMaximum { get; set; }
+
+    private double Maximum => ScaleMaximum ?? Values.Where(value => value.HasValue)
+        .Select(value => value!.Value)
         .DefaultIfEmpty(0)
         .Max();
 
-    private double GetHeight(double? value) =>
-        !value.HasValue || value.Value <= 0 || Maximum <= 0
-            ? 0
-            : Math.Max(5, value.Value / Maximum * 100);
+    private double GetHeight(double? value)
+    {
+        if (!value.HasValue || value.Value <= 0 || Maximum <= 0)
+        {
+            return 0;
+        }
+
+        return Math.Clamp(value.Value / Maximum * 100, 5, 100);
+    }
 
     private bool ShouldShowLabel(int index) =>
         Values.Count <= 7 || index % 5 == 0 || index == Values.Count - 1;

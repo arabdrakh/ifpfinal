@@ -75,6 +75,34 @@ public class WellnessAnalyticsTests
     }
 
     [Fact]
+    public async Task GetReportAsync_OneDayReportShouldLoadTwoWeeksForInsights()
+    {
+        var repositories = new TestRepositories();
+        var endDate = new DateOnly(2026, 11, 14);
+
+        for (var offset = -13; offset <= 0; offset++)
+        {
+            var date = endDate.AddDays(offset);
+            var sleepHours = offset < -6 ? 8 : 6;
+            repositories.Sleep.Add(SleepLog.Create(
+                date,
+                new TimeOnly(23, 0),
+                new TimeOnly(23, 0).AddHours(sleepHours)).Value);
+            repositories.Activities.Add(ActivityLog.Create(
+                date,
+                ActivityType.Walking,
+                offset < -6 ? 30 : 60,
+                1000).Value);
+        }
+
+        var report = await repositories.CreateService().GetReportAsync(endDate, 1);
+
+        Assert.Single(report.Days);
+        Assert.Contains(report.Insights, insight => insight.Contains("sleep duration was lower", StringComparison.Ordinal));
+        Assert.Contains(report.Insights, insight => insight.Contains("activity time increased", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task GetReportAsync_ShouldRepresentUntrackedAveragesAsMissing()
     {
         var service = new TestRepositories().CreateService();

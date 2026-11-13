@@ -12,14 +12,12 @@ public sealed class WaterTrackerService(IWaterLogRepository repository)
         int dailyGoalMl = 2000,
         CancellationToken cancellationToken = default)
     {
-        var result = WaterLog.Create(date, amountMl, dailyGoalMl);
-        if (result.IsFailure)
-        {
-            return result;
-        }
-
-        await repository.AddAsync(result.Value, cancellationToken);
-        return result;
+        return await WaterLog.Create(date, amountMl, dailyGoalMl)
+            .BindAsync(async log =>
+            {
+                await repository.AddAsync(log, cancellationToken);
+                return Result<WaterLog, DomainError>.Ok(log);
+            });
     }
 
     public async Task<WaterProgress> GetDailyProgressAsync(

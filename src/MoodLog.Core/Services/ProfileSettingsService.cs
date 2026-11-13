@@ -16,17 +16,15 @@ public sealed class ProfileSettingsService(IProfileSettingsRepository repository
         int dailyStepGoal,
         CancellationToken cancellationToken = default)
     {
-        var result = ProfileSettings.Create(
-            displayName,
-            dailyWaterGoalMl,
-            dailySleepGoalMinutes,
-            dailyStepGoal);
-        if (result.IsFailure)
-        {
-            return result;
-        }
-
-        await repository.SaveAsync(result.Value, cancellationToken);
-        return result;
+        return await ProfileSettings.Create(
+                displayName,
+                dailyWaterGoalMl,
+                dailySleepGoalMinutes,
+                dailyStepGoal)
+            .BindAsync(async settings =>
+            {
+                await repository.SaveAsync(settings, cancellationToken);
+                return Result<ProfileSettings, DomainError>.Ok(settings);
+            });
     }
 }
