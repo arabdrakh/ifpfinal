@@ -1,5 +1,7 @@
 using MoodLog.Web.Components;
 using MoodLog.Infrastructure;
+using MoodLog.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +11,12 @@ builder.Services.AddRazorComponents()
 builder.Services.AddMoodLogInfrastructure(builder.Configuration);
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<MoodLogDbContext>();
+    await dbContext.Database.EnsureCreatedAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

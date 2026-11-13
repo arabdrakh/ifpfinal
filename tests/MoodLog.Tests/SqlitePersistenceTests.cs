@@ -8,6 +8,38 @@ namespace MoodLog.Tests;
 public class SqlitePersistenceTests
 {
     [Fact]
+    public async Task GetRecentAsync_ShouldReturnNewestEntriesFirstAndApplyLimit()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<MoodLogDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var context = new MoodLogDbContext(options);
+        await context.Database.EnsureCreatedAsync();
+
+        var olderEntry = MoodEntry.Create(
+            new DateOnly(2026, 11, 12),
+            MoodLevel.Neutral,
+            null,
+            null).Value;
+        var newerEntry = MoodEntry.Create(
+            new DateOnly(2026, 11, 13),
+            MoodLevel.Good,
+            null,
+            null).Value;
+        var repository = new EfMoodEntryRepository(context);
+
+        await repository.AddAsync(olderEntry);
+        await repository.AddAsync(newerEntry);
+        var recentEntries = await repository.GetRecentAsync(1);
+
+        Assert.Equal(newerEntry.Id, Assert.Single(recentEntries).Id);
+    }
+
+    [Fact]
     public async Task SaveChanges_ShouldPersistMoodAndWaterLogs()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

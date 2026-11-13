@@ -1,7 +1,137 @@
 ﻿@page "/"
+@using MoodLog.Core.Models
+@using MoodLog.Core.Services
+@inject MoodJournalService Journal
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Mood journal | MoodLog</PageTitle>
 
-<h1>Hello, world!</h1>
+<main class="mood-page">
+    <header class="mood-header">
+        <div>
+            <p class="mood-eyebrow">YOUR PERSONAL WELLNESS SPACE</p>
+            <h1>Mood journal</h1>
+            <p class="mood-subtitle">A small check-in can help you notice how you feel over time.</p>
+        </div>
+        <span class="mood-date">@DateTime.Today.ToString("dddd, MMMM d")</span>
+    </header>
 
-Welcome to your new app.
+    <div class="mood-grid">
+        <section class="mood-card mood-form-card">
+            <h2>How are you feeling?</h2>
+            <p class="mood-muted">Take a moment to check in with yourself.</p>
+
+            <EditForm Model="_form" OnSubmit="SaveAsync">
+                <label class="form-label" for="entry-date">Date</label>
+                <InputDate id="entry-date" class="form-control mood-control" @bind-Value="_form.Date" />
+
+                <label class="form-label mt-3" for="entry-level">Mood</label>
+                <InputSelect id="entry-level" class="form-select mood-control" @bind-Value="_form.Level">
+                    @foreach (var level in Enum.GetValues<MoodLevel>())
+                    {
+                        <option value="@level">@level.ToEmoji() @level.ToLabel()</option>
+                    }
+                </InputSelect>
+
+                <label class="form-label mt-3" for="entry-tags">Tags <span class="mood-muted">(optional)</span></label>
+                <InputText id="entry-tags" class="form-control mood-control" @bind-Value="_form.Tags"
+                           placeholder="work, friends, rest" />
+
+                <label class="form-label mt-3" for="entry-note">Note <span class="mood-muted">(optional)</span></label>
+                <InputTextArea id="entry-note" class="form-control mood-control" @bind-Value="_form.Note"
+                               maxlength="500" rows="4" placeholder="What would you like to remember?" />
+                <div class="mood-help">Up to 500 characters</div>
+
+                <button class="btn mood-submit mt-4" type="submit">Save check-in</button>
+            </EditForm>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <p class="mood-feedback" role="status">@_message</p>
+            }
+        </section>
+
+        <section class="mood-card mood-history-card">
+            <div class="mood-history-heading">
+                <div>
+                    <h2>Recent check-ins</h2>
+                    <p class="mood-muted">Your latest moments, in one place.</p>
+                </div>
+                <span class="mood-count">@_entries.Count</span>
+            </div>
+
+            @if (_entries.Count == 0)
+            {
+                <div class="mood-empty">
+                    <span aria-hidden="true">✦</span>
+                    <p>Your journal starts here.</p>
+                    <p class="mood-muted">Add your first check-in to see it in your history.</p>
+                </div>
+            }
+            else
+            {
+                <div class="mood-entry-list">
+                    @foreach (var entry in _entries)
+                    {
+                        <article class="mood-entry">
+                            <span class="mood-entry-emoji" aria-hidden="true">@entry.Level.ToEmoji()</span>
+                            <div class="mood-entry-content">
+                                <div class="mood-entry-heading">
+                                    <strong>@entry.Level.ToLabel()</strong>
+                                    <time datetime="@entry.Date.ToString("yyyy-MM-dd")">@entry.Date.ToString("MMM d, yyyy")</time>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(entry.Note))
+                                {
+                                    <p class="mood-entry-note">@entry.Note</p>
+                                }
+                                @if (entry.Tags.Count > 0)
+                                {
+                                    <div class="mood-tags">
+                                        @foreach (var tag in entry.Tags)
+                                        {
+                                            <span>@tag</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</main>
+
+@code {
+    private MoodEntryForm _form = new();
+    private IReadOnlyList<MoodEntry> _entries = [];
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _form.Date = DateOnly.FromDateTime(DateTime.Today);
+        _entries = await Journal.GetRecentAsync(30);
+    }
+
+    private async Task SaveAsync()
+    {
+        var tags = _form.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var result = await Journal.AddAsync(_form.Date, _form.Level, tags, _form.Note);
+        if (result.IsFailure)
+        {
+            _message = result.Error.Message;
+            return;
+        }
+
+        _entries = await Journal.GetRecentAsync(30);
+        _form = new MoodEntryForm { Date = DateOnly.FromDateTime(DateTime.Today) };
+        _message = "Your check-in has been saved.";
+    }
+
+    private sealed class MoodEntryForm
+    {
+        public DateOnly Date { get; set; }
+        public MoodLevel Level { get; set; } = MoodLevel.Neutral;
+        public string Tags { get; set; } = string.Empty;
+        public string Note { get; set; } = string.Empty;
+    }
+}
