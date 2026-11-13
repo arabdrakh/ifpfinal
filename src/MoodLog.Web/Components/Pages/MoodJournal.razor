@@ -12,7 +12,7 @@
             <h1>Mood journal</h1>
             <p class="mood-subtitle">A small check-in can help you notice how you feel over time.</p>
         </div>
-        <span class="mood-date">@DateTime.Today.ToString("dddd, MMMM d")</span>
+        <span class="mood-date">@DateTime.Today.ToString("dddd, MMMM d", CultureInfo.InvariantCulture)</span>
     </header>
 
     <div class="mood-grid">
@@ -62,7 +62,6 @@
             @if (_entries.Count == 0)
             {
                 <div class="mood-empty">
-                    <span aria-hidden="true">✦</span>
                     <p>Your journal starts here.</p>
                     <p class="mood-muted">Add your first check-in to see it in your history.</p>
                 </div>
@@ -77,7 +76,7 @@
                             <div class="mood-entry-content">
                                 <div class="mood-entry-heading">
                                     <strong>@entry.Level.ToLabel()</strong>
-                                    <time datetime="@entry.Date.ToString("yyyy-MM-dd")">@entry.Date.ToString("MMM d, yyyy")</time>
+                                    <time datetime="@entry.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">@entry.Date.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</time>
                                 </div>
                                 @if (!string.IsNullOrWhiteSpace(entry.Note))
                                 {

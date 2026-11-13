@@ -13,7 +13,7 @@
             <h1>Good @Greeting, @_displayName</h1>
             <p class="dashboard-subtitle">A little progress is still progress. Here's your day so far.</p>
         </div>
-        <span class="dashboard-date">@DateTime.Today.ToString("dddd, MMMM d")</span>
+        <span class="dashboard-date">@DateTime.Today.ToString("dddd, MMMM d", CultureInfo.InvariantCulture)</span>
     </header>
 
     <section class="dashboard-metrics" aria-label="Today's wellness summary">
@@ -52,7 +52,6 @@
                     <p class="dashboard-eyebrow">GENTLE OBSERVATIONS</p>
                     <h2>Patterns, not pressure</h2>
                 </div>
-                <span aria-hidden="true">✦</span>
             </div>
             <ul class="dashboard-insights">
                 @foreach (var insight in _report?.Insights ?? [])

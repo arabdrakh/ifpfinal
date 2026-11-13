@@ -189,10 +189,6 @@ body {
     text-align: center;
 }
 
-.mood-empty > span {
-    font-size: 2rem;
-}
-
 .mood-empty p {
     margin: 0.65rem 0 0;
 }
@@ -399,7 +395,6 @@ body {
 
 .water-goal-note {
     display: flex;
-    gap: 0.55rem;
     margin-top: 2rem;
     padding: 0.9rem;
     border-radius: 0.8rem;
@@ -888,11 +883,6 @@ body {
     margin: 0;
     font-size: 1.15rem;
     font-weight: 700;
-}
-
-.dashboard-card-heading > span, .analytics-card-heading > span {
-    color: #3f8e78;
-    font-size: 1.5rem;
 }
 
 .dashboard-card-heading .dashboard-eyebrow, .analytics-card-heading .analytics-eyebrow {

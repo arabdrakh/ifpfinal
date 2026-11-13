@@ -47,7 +47,7 @@
             <div class="tracker-section-heading">
                 <div>
                     <h2 id="sleep-history-title">Sleep history</h2>
-                    <p class="tracker-muted">@_date.ToString("MMMM d, yyyy")</p>
+                    <p class="tracker-muted">@_date.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture)</p>
                 </div>
                 <span class="tracker-count">@_entries.Count</span>
             </div>

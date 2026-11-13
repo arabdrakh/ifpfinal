@@ -50,7 +50,6 @@
             </div>
 
             <div class="water-goal-note">
-                <span aria-hidden="true">✦</span>
                 @(_progress.GoalReached
                     ? "You reached your hydration goal for this day."
                     : "Small, regular sips can make tracking feel easier.")
@@ -91,7 +90,7 @@
         <div class="water-history-heading">
             <div>
                 <h2 id="water-history-title">Today's drinks</h2>
-                <p class="water-muted">Entries for @_date.ToString("MMMM d, yyyy")</p>
+                <p class="water-muted">Entries for @_date.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture)</p>
             </div>
             <span class="water-entry-count">@_logs.Count</span>
         </div>
