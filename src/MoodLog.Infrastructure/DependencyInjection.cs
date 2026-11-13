@@ -19,7 +19,9 @@ public static class DependencyInjection
         services.AddDbContext<MoodLogDbContext>(options =>
             options.UseSqlite(connectionString));
         services.AddScoped<IMoodEntryRepository, EfMoodEntryRepository>();
+        services.AddScoped<IWaterLogRepository, EfWaterLogRepository>();
         services.AddScoped<MoodJournalService>();
+        services.AddScoped<WaterTrackerService>();
 
         return services;
     }

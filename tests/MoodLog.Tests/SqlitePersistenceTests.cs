@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using MoodLog.Core.Interfaces;
 using MoodLog.Core.Models;
 using MoodLog.Infrastructure.Data;
 
@@ -79,5 +80,29 @@ public class SqlitePersistenceTests
             Assert.Equal(300, savedWaterLog.AmountMl);
             Assert.Equal(2200, savedWaterLog.DailyGoalMl);
         }
+    }
+
+    [Fact]
+    public async Task GetForDateAsync_ShouldReturnOnlyLogsForRequestedDate()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<MoodLogDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var context = new MoodLogDbContext(options);
+        await context.Database.EnsureCreatedAsync();
+        var requestedDate = new DateOnly(2026, 11, 13);
+        var requestedLog = WaterLog.Create(requestedDate, 300).Value;
+        var otherDayLog = WaterLog.Create(requestedDate.AddDays(-1), 500).Value;
+        var repository = new EfWaterLogRepository(context);
+
+        await repository.AddAsync(otherDayLog);
+        await repository.AddAsync(requestedLog);
+        var logs = await repository.GetForDateAsync(requestedDate);
+
+        Assert.Equal(requestedLog.Id, Assert.Single(logs).Id);
     }
 }
