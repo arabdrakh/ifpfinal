@@ -20,9 +20,11 @@
             <h2>How are you feeling?</h2>
             <p class="mood-muted">Take a moment to check in with yourself.</p>
 
-            <EditForm Model="_form" OnSubmit="SaveAsync">
+            <EditForm Model="_form" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
                 <label class="form-label" for="entry-date">Date</label>
                 <InputDate id="entry-date" class="form-control mood-control" @bind-Value="_form.Date" />
+                <ValidationMessage For="@(() => _form.Date)" />
 
                 <label class="form-label mt-3" for="entry-level">Mood</label>
                 <InputSelect id="entry-level" class="form-select mood-control" @bind-Value="_form.Level">
@@ -31,6 +33,7 @@
                         <option value="@level">@level.ToEmoji() @level.ToLabel()</option>
                     }
                 </InputSelect>
+                <ValidationMessage For="@(() => _form.Level)" />
 
                 <label class="form-label mt-3" for="entry-tags">Tags <span class="mood-muted">(optional)</span></label>
                 <InputText id="entry-tags" class="form-control mood-control" @bind-Value="_form.Tags"
@@ -39,6 +42,7 @@
                 <label class="form-label mt-3" for="entry-note">Note <span class="mood-muted">(optional)</span></label>
                 <InputTextArea id="entry-note" class="form-control mood-control" @bind-Value="_form.Note"
                                maxlength="500" rows="4" placeholder="What would you like to remember?" />
+                <ValidationMessage For="@(() => _form.Note)" />
                 <div class="mood-help">Up to 500 characters</div>
 
                 <button class="btn mood-submit mt-4" type="submit">Save check-in</button>
@@ -128,9 +132,15 @@
 
     private sealed class MoodEntryForm
     {
+        [Required]
         public DateOnly Date { get; set; }
+
+        [EnumDataType(typeof(MoodLevel))]
         public MoodLevel Level { get; set; } = MoodLevel.Neutral;
+
         public string Tags { get; set; } = string.Empty;
+
+        [StringLength(500, ErrorMessage = "Note cannot exceed 500 characters.")]
         public string Note { get; set; } = string.Empty;
     }
 }

@@ -50,13 +50,23 @@ On the first start, MoodLog creates the SQLite database and applies its migratio
 
 ## Run the tests
 
-Automated tests help catch bugs when features change. They check validation rules, tracking services, analytics, and SQLite persistence and migrations. Keeping the tests in the project makes it easier for both team members to verify changes.
+Automated tests help catch bugs when features change. They check validation rules, tracking services, analytics, and SQLite persistence and migrations. GitHub Actions runs the solution tests on Windows, Linux, and macOS. The project does not yet include automated browser or end-to-end tests.
 
 From the project root, run:
 
 ```bash
 dotnet test tests/MoodLog.Tests/MoodLog.Tests.csproj
 ```
+
+## Check the app on a phone
+
+For a quick responsive-layout check, open the browser's developer tools and switch to its mobile device mode. To open the app on a phone connected to the same trusted Wi-Fi network, run this command from Git Bash in the project root:
+
+```bash
+ASPNETCORE_URLS="http://0.0.0.0:5158" dotnet run --no-launch-profile --project src/MoodLog.Web/MoodLog.Web.csproj
+```
+
+Keep the terminal open, find the computer's local IP address, and open `http://<computer-ip>:5158` on the phone. Allow access through the firewall only on a trusted private network. Press `Ctrl+C` to stop the app after testing.
 
 
 ## Project structure

@@ -24,7 +24,8 @@
             <h2 id="activity-form-title">Log an activity</h2>
             <p class="tracker-muted">Record a workout, walk, or any movement.</p>
 
-            <EditForm Model="_form" OnSubmit="SaveAsync">
+            <EditForm Model="_form" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
                 <label class="form-label" for="activity-type">Activity</label>
                 <InputSelect id="activity-type" class="form-select tracker-control" @bind-Value="_form.Type">
                     @foreach (var type in Enum.GetValues<ActivityType>())
@@ -32,6 +33,7 @@
                         <option value="@type">@FormatType(type)</option>
                     }
                 </InputSelect>
+                <ValidationMessage For="@(() => _form.Type)" />
 
                 <label class="form-label mt-3" for="activity-duration">Duration</label>
                 <div class="input-group">
@@ -39,10 +41,12 @@
                                  @bind-Value="_form.DurationMinutes" min="1" max="1440" />
                     <span class="input-group-text tracker-unit">minutes</span>
                 </div>
+                <ValidationMessage For="@(() => _form.DurationMinutes)" />
 
                 <label class="form-label mt-3" for="activity-steps">Steps <span class="tracker-muted">(optional)</span></label>
                 <InputNumber id="activity-steps" class="form-control tracker-control"
                              @bind-Value="_form.Steps" min="0" max="100000" />
+                <ValidationMessage For="@(() => _form.Steps)" />
                 <p class="tracker-hint">Duration: 1–1440 minutes · Steps: up to 100000</p>
 
                 <button class="btn tracker-submit mt-3" type="submit">Save activity</button>
@@ -57,7 +61,7 @@
         <section class="tracker-card" aria-labelledby="activity-summary-title">
             <div class="tracker-section-heading">
                 <div>
-                    <h2 id="activity-summary-title">Today's movement</h2>
+                    <h2 id="activity-summary-title">@(_date == DateOnly.FromDateTime(DateTime.Today) ? "Today's movement" : "Selected day's movement")</h2>
                     <p class="tracker-muted">@_date.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture)</p>
                 </div>
                 <span class="tracker-count">@_entries.Count</span>
@@ -144,8 +148,13 @@
 
     private sealed class ActivityForm
     {
+        [EnumDataType(typeof(ActivityType))]
         public ActivityType Type { get; set; } = ActivityType.Walking;
+
+        [Range(1, 1440, ErrorMessage = "Duration must be between 1 and 1440 minutes.")]
         public int DurationMinutes { get; set; } = 30;
+
+        [Range(0, 100000, ErrorMessage = "Steps must be between 0 and 100000.")]
         public int Steps { get; set; }
     }
 }

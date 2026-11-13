@@ -24,14 +24,17 @@
             <h2 id="sleep-form-title">Log a night's sleep</h2>
             <p class="tracker-muted">Enter the time you went to bed and woke up.</p>
 
-            <EditForm Model="_form" OnSubmit="SaveAsync">
+            <EditForm Model="_form" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
                 <label class="form-label" for="sleep-bedtime">Bedtime</label>
                 <InputDate id="sleep-bedtime" Type="InputDateType.Time"
                            class="form-control tracker-control" @bind-Value="_form.Bedtime" />
+                <ValidationMessage For="@(() => _form.Bedtime)" />
 
                 <label class="form-label mt-3" for="sleep-waketime">Wake-up time</label>
                 <InputDate id="sleep-waketime" Type="InputDateType.Time"
                            class="form-control tracker-control" @bind-Value="_form.WakeTime" />
+                <ValidationMessage For="@(() => _form.WakeTime)" />
 
                 <p class="tracker-hint">Overnight sleep is calculated automatically. Entries over 16 hours are not accepted.</p>
                 <button class="btn tracker-submit mt-3" type="submit">Save sleep</button>

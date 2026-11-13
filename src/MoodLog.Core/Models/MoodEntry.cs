@@ -16,6 +16,12 @@ public record MoodEntry(
         IEnumerable<string>? tags,
         string? note)
     {
+        if (!Enum.IsDefined(level))
+        {
+            return Result<MoodEntry, DomainError>.Fail(
+                DomainError.Validation("Mood level is invalid."));
+        }
+
         var cleanedNote = (note ?? string.Empty).Trim();
         if (cleanedNote.Length > 500)
         {

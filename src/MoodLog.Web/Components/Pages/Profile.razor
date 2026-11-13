@@ -18,10 +18,12 @@
         <h2 id="profile-settings-title">Personal settings</h2>
         <p class="tracker-muted">Your profile and goals are stored locally with your MoodLog data.</p>
 
-        <EditForm Model="_form" OnSubmit="SaveAsync">
+        <EditForm Model="_form" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
             <label class="form-label" for="profile-name">Display name</label>
             <InputText id="profile-name" class="form-control tracker-control"
                        @bind-Value="_form.DisplayName" maxlength="40" />
+            <ValidationMessage For="@(() => _form.DisplayName)" />
 
             <div class="profile-goals">
                 <div>
@@ -31,6 +33,7 @@
                                      @bind-Value="_form.DailyWaterGoalMl" min="500" max="10000" />
                         <span class="input-group-text tracker-unit">ml</span>
                     </div>
+                    <ValidationMessage For="@(() => _form.DailyWaterGoalMl)" />
                 </div>
                 <div>
                     <label class="form-label" for="profile-sleep-goal">Daily sleep goal</label>
@@ -39,6 +42,7 @@
                                      @bind-Value="_form.DailySleepGoalHours" min="4" max="16" step="0.5" />
                         <span class="input-group-text tracker-unit">hours</span>
                     </div>
+                    <ValidationMessage For="@(() => _form.DailySleepGoalHours)" />
                 </div>
                 <div>
                     <label class="form-label" for="profile-step-goal">Daily step goal</label>
@@ -47,6 +51,7 @@
                                      @bind-Value="_form.DailyStepGoal" min="1000" max="50000" step="500" />
                         <span class="input-group-text tracker-unit">steps</span>
                     </div>
+                    <ValidationMessage For="@(() => _form.DailyStepGoal)" />
                 </div>
             </div>
 
@@ -95,9 +100,17 @@
 
     private sealed class ProfileForm
     {
+        [Required(ErrorMessage = "Display name is required.")]
+        [StringLength(40, MinimumLength = 1, ErrorMessage = "Name must contain between 1 and 40 characters.")]
         public string DisplayName { get; set; } = ProfileSettings.Default.DisplayName;
+
+        [Range(500, 10000, ErrorMessage = "Daily water goal must be between 500 and 10000 ml.")]
         public int DailyWaterGoalMl { get; set; } = ProfileSettings.Default.DailyWaterGoalMl;
+
+        [Range(4, 16, ErrorMessage = "Daily sleep goal must be between 4 and 16 hours.")]
         public double DailySleepGoalHours { get; set; } = ProfileSettings.Default.DailySleepGoalMinutes / 60d;
+
+        [Range(1000, 50000, ErrorMessage = "Daily step goal must be between 1000 and 50000.")]
         public int DailyStepGoal { get; set; } = ProfileSettings.Default.DailyStepGoal;
     }
 }

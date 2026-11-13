@@ -3,11 +3,11 @@
         <h2>@Title</h2>
         <span>@Unit</span>
     </div>
-    <div class="trend-chart" role="img" aria-label="@($"{Title} daily chart for {Values.Count} days")">
+    <div class="trend-chart" role="list" aria-label="@($"{Title} daily chart for {Values.Count} days")">
         @for (var index = 0; index < Values.Count; index++)
         {
             var value = Values[index];
-            <div class="chart-column" aria-label="@($"{Labels[index]}: {FormatValue(value)} {Unit}")">
+            <div class="chart-column" role="listitem" aria-label="@($"{Labels[index]}: {FormatValue(value)} {Unit}")">
                 <div class="chart-bar-track">
                     <span class="chart-bar @Color" style="height: @GetHeight(value)%"></span>
                 </div>
