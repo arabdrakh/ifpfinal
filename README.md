@@ -83,10 +83,6 @@ MoodLog stores data in a SQLite file on the computer where the application runs.
 
 Goals and Smart Insights are intended for personal tracking only. Insights are calculated from the data you enter and are not medical advice.
 
-## Why `.gitignore` matters
-
-The `.gitignore` file keeps generated build files, local settings, and SQLite database files out of Git. These files are not needed to build the project, can make commits much larger, and the database may contain personal entries. Do not remove these ignore rules or commit your local database.
-
 ## Team Contributions
 
 MoodLog was developed by two team members working together across the project:
