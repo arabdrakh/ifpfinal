@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<WaterTrackerService>();
         services.AddScoped<SleepTrackerService>();
         services.AddScoped<ActivityTrackerService>();
+        services.AddScoped<WellnessAnalyticsService>();
 
         return services;
     }

@@ -20,4 +20,14 @@ public sealed class EfSleepLogRepository(MoodLogDbContext dbContext) : ISleepLog
             .Where(log => log.Date == date)
             .OrderByDescending(log => log.LoggedAt)
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<SleepLog>> GetForRangeAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.SleepLogs
+            .AsNoTracking()
+            .Where(log => log.Date >= startDate && log.Date <= endDate)
+            .OrderBy(log => log.Date)
+            .ToListAsync(cancellationToken);
 }

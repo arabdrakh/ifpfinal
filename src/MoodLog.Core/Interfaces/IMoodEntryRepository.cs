@@ -9,4 +9,9 @@ public interface IMoodEntryRepository
     Task<IReadOnlyList<MoodEntry>> GetRecentAsync(
         int count,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<MoodEntry>> GetForRangeAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default);
 }

@@ -76,5 +76,12 @@ public class WaterTrackerServiceTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<WaterLog>>(
                 Logs.Where(log => log.Date == date).ToArray());
+
+        public Task<IReadOnlyList<WaterLog>> GetForRangeAsync(
+            DateOnly startDate,
+            DateOnly endDate,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<WaterLog>>(
+                Logs.Where(log => log.Date >= startDate && log.Date <= endDate).ToArray());
     }
 }

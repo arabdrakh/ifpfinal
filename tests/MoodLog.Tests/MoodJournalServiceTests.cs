@@ -61,5 +61,12 @@ public class MoodJournalServiceTests
             int count,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<MoodEntry>>(Entries.Take(count).ToArray());
+
+        public Task<IReadOnlyList<MoodEntry>> GetForRangeAsync(
+            DateOnly startDate,
+            DateOnly endDate,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<MoodEntry>>(
+                Entries.Where(entry => entry.Date >= startDate && entry.Date <= endDate).ToArray());
     }
 }

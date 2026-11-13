@@ -79,6 +79,13 @@ public class SleepAndActivityTests
             DateOnly date,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<SleepLog>>(Logs.Where(log => log.Date == date).ToArray());
+
+        public Task<IReadOnlyList<SleepLog>> GetForRangeAsync(
+            DateOnly startDate,
+            DateOnly endDate,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<SleepLog>>(
+                Logs.Where(log => log.Date >= startDate && log.Date <= endDate).ToArray());
     }
 
     private sealed class TestActivityLogRepository : IActivityLogRepository
@@ -95,5 +102,12 @@ public class SleepAndActivityTests
             DateOnly date,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ActivityLog>>(Logs.Where(log => log.Date == date).ToArray());
+
+        public Task<IReadOnlyList<ActivityLog>> GetForRangeAsync(
+            DateOnly startDate,
+            DateOnly endDate,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ActivityLog>>(
+                Logs.Where(log => log.Date >= startDate && log.Date <= endDate).ToArray());
     }
 }

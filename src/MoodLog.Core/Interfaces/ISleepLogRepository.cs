@@ -9,4 +9,9 @@ public interface ISleepLogRepository
     Task<IReadOnlyList<SleepLog>> GetForDateAsync(
         DateOnly date,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SleepLog>> GetForRangeAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default);
 }

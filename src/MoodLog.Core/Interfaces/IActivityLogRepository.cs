@@ -9,4 +9,9 @@ public interface IActivityLogRepository
     Task<IReadOnlyList<ActivityLog>> GetForDateAsync(
         DateOnly date,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ActivityLog>> GetForRangeAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default);
 }

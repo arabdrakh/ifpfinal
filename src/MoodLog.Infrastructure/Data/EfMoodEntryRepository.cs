@@ -21,4 +21,15 @@ public sealed class EfMoodEntryRepository(MoodLogDbContext dbContext) : IMoodEnt
             .ThenByDescending(entry => entry.CreatedAt)
             .Take(count)
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<MoodEntry>> GetForRangeAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.MoodEntries
+            .AsNoTracking()
+            .Where(entry => entry.Date >= startDate && entry.Date <= endDate)
+            .OrderBy(entry => entry.Date)
+            .ThenBy(entry => entry.CreatedAt)
+            .ToListAsync(cancellationToken);
 }

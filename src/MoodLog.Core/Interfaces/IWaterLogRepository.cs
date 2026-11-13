@@ -9,4 +9,9 @@ public interface IWaterLogRepository
     Task<IReadOnlyList<WaterLog>> GetForDateAsync(
         DateOnly date,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<WaterLog>> GetForRangeAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default);
 }
