@@ -1,137 +1,95 @@
 ﻿@page "/"
 @using MoodLog.Core.Models
 @using MoodLog.Core.Services
-@inject MoodJournalService Journal
+@inject WellnessAnalyticsService Analytics
 
-<PageTitle>Mood journal | MoodLog</PageTitle>
+<PageTitle>Dashboard | MoodLog</PageTitle>
 
-<main class="mood-page">
-    <header class="mood-header">
+<main class="dashboard-page">
+    <header class="dashboard-header">
         <div>
-            <p class="mood-eyebrow">YOUR PERSONAL WELLNESS SPACE</p>
-            <h1>Mood journal</h1>
-            <p class="mood-subtitle">A small check-in can help you notice how you feel over time.</p>
+            <p class="dashboard-eyebrow">YOUR WELLNESS, AT A GLANCE</p>
+            <h1>Good @Greeting,</h1>
+            <p class="dashboard-subtitle">A little progress is still progress. Here's your day so far.</p>
         </div>
-        <span class="mood-date">@DateTime.Today.ToString("dddd, MMMM d")</span>
+        <span class="dashboard-date">@DateTime.Today.ToString("dddd, MMMM d")</span>
     </header>
 
-    <div class="mood-grid">
-        <section class="mood-card mood-form-card">
-            <h2>How are you feeling?</h2>
-            <p class="mood-muted">Take a moment to check in with yourself.</p>
+    <section class="dashboard-metrics" aria-label="Today's wellness summary">
+        <a class="dashboard-metric metric-mood" href="mood">
+            <span class="metric-icon" aria-hidden="true">@(Today?.AverageMood is double mood ? MoodLevelExtensions.ToEmoji((MoodLevel)Math.Clamp((int)Math.Round(mood), 1, 5)) : "☺")</span>
+            <span class="metric-label">Mood</span>
+            <strong>@(Today?.AverageMood is double averageMood ? $"{averageMood:F1} / 5" : "Not logged")</strong>
+            <span class="metric-link">Check in <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="dashboard-metric metric-water" href="water">
+            <span class="metric-icon" aria-hidden="true">💧</span>
+            <span class="metric-label">Water</span>
+            <strong>@(Today?.WaterConsumedMl ?? 0) <small>/ @(Today?.WaterGoalMl ?? 2000) ml</small></strong>
+            <span class="metric-link">Log water <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="dashboard-metric metric-sleep" href="sleep">
+            <span class="metric-icon" aria-hidden="true">🌙</span>
+            <span class="metric-label">Sleep</span>
+            <strong>@FormatDuration(Today?.SleepMinutes)</strong>
+            <span class="metric-link">Log sleep <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="dashboard-metric metric-activity" href="activity">
+            <span class="metric-icon" aria-hidden="true">🏃</span>
+            <span class="metric-label">Activity</span>
+            <strong>@(Today?.ActivityMinutes ?? 0) <small>min · @((Today?.Steps ?? 0).ToString("N0")) steps</small></strong>
+            <span class="metric-link">Log activity <span aria-hidden="true">→</span></span>
+        </a>
+    </section>
 
-            <EditForm Model="_form" OnSubmit="SaveAsync">
-                <label class="form-label" for="entry-date">Date</label>
-                <InputDate id="entry-date" class="form-control mood-control" @bind-Value="_form.Date" />
-
-                <label class="form-label mt-3" for="entry-level">Mood</label>
-                <InputSelect id="entry-level" class="form-select mood-control" @bind-Value="_form.Level">
-                    @foreach (var level in Enum.GetValues<MoodLevel>())
-                    {
-                        <option value="@level">@level.ToEmoji() @level.ToLabel()</option>
-                    }
-                </InputSelect>
-
-                <label class="form-label mt-3" for="entry-tags">Tags <span class="mood-muted">(optional)</span></label>
-                <InputText id="entry-tags" class="form-control mood-control" @bind-Value="_form.Tags"
-                           placeholder="work, friends, rest" />
-
-                <label class="form-label mt-3" for="entry-note">Note <span class="mood-muted">(optional)</span></label>
-                <InputTextArea id="entry-note" class="form-control mood-control" @bind-Value="_form.Note"
-                               maxlength="500" rows="4" placeholder="What would you like to remember?" />
-                <div class="mood-help">Up to 500 characters</div>
-
-                <button class="btn mood-submit mt-4" type="submit">Save check-in</button>
-            </EditForm>
-
-            @if (!string.IsNullOrWhiteSpace(_message))
-            {
-                <p class="mood-feedback" role="status">@_message</p>
-            }
+    <div class="dashboard-lower">
+        <section class="dashboard-card insights-card">
+            <div class="dashboard-card-heading">
+                <div>
+                    <p class="dashboard-eyebrow">GENTLE OBSERVATIONS</p>
+                    <h2>Patterns, not pressure</h2>
+                </div>
+                <span aria-hidden="true">✦</span>
+            </div>
+            <ul class="dashboard-insights">
+                @foreach (var insight in _report?.Insights ?? [])
+                {
+                    <li>@insight</li>
+                }
+            </ul>
+            <p class="dashboard-disclaimer">Based only on what you've logged. These are not medical advice or diagnoses.</p>
+            <a class="dashboard-text-link" href="analytics">Explore your analytics →</a>
         </section>
 
-        <section class="mood-card mood-history-card">
-            <div class="mood-history-heading">
-                <div>
-                    <h2>Recent check-ins</h2>
-                    <p class="mood-muted">Your latest moments, in one place.</p>
-                </div>
-                <span class="mood-count">@_entries.Count</span>
+        <section class="dashboard-card dashboard-quick-card">
+            <p class="dashboard-eyebrow">DAILY CHECK-IN</p>
+            <h2>Make today count</h2>
+            <p class="dashboard-subtitle">Your personal log is ready whenever you are.</p>
+            <div class="dashboard-actions">
+                <a href="mood">😊 <span>Log mood</span></a>
+                <a href="water">💧 <span>Add water</span></a>
+                <a href="sleep">🌙 <span>Track sleep</span></a>
+                <a href="activity">🏃 <span>Log activity</span></a>
             </div>
-
-            @if (_entries.Count == 0)
-            {
-                <div class="mood-empty">
-                    <span aria-hidden="true">✦</span>
-                    <p>Your journal starts here.</p>
-                    <p class="mood-muted">Add your first check-in to see it in your history.</p>
-                </div>
-            }
-            else
-            {
-                <div class="mood-entry-list">
-                    @foreach (var entry in _entries)
-                    {
-                        <article class="mood-entry">
-                            <span class="mood-entry-emoji" aria-hidden="true">@entry.Level.ToEmoji()</span>
-                            <div class="mood-entry-content">
-                                <div class="mood-entry-heading">
-                                    <strong>@entry.Level.ToLabel()</strong>
-                                    <time datetime="@entry.Date.ToString("yyyy-MM-dd")">@entry.Date.ToString("MMM d, yyyy")</time>
-                                </div>
-                                @if (!string.IsNullOrWhiteSpace(entry.Note))
-                                {
-                                    <p class="mood-entry-note">@entry.Note</p>
-                                }
-                                @if (entry.Tags.Count > 0)
-                                {
-                                    <div class="mood-tags">
-                                        @foreach (var tag in entry.Tags)
-                                        {
-                                            <span>@tag</span>
-                                        }
-                                    </div>
-                                }
-                            </div>
-                        </article>
-                    }
-                </div>
-            }
         </section>
     </div>
 </main>
 
 @code {
-    private MoodEntryForm _form = new();
-    private IReadOnlyList<MoodEntry> _entries = [];
-    private string? _message;
+    private WellnessReport? _report;
+    private WellnessDay? Today => _report?.Days.SingleOrDefault();
+    private string Greeting => DateTime.Now.Hour switch
+    {
+        < 12 => "morning",
+        < 18 => "afternoon",
+        _ => "evening"
+    };
 
     protected override async Task OnInitializedAsync()
     {
-        _form.Date = DateOnly.FromDateTime(DateTime.Today);
-        _entries = await Journal.GetRecentAsync(30);
+        _report = await Analytics.GetReportAsync(DateOnly.FromDateTime(DateTime.Today), 1);
     }
 
-    private async Task SaveAsync()
-    {
-        var tags = _form.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var result = await Journal.AddAsync(_form.Date, _form.Level, tags, _form.Note);
-        if (result.IsFailure)
-        {
-            _message = result.Error.Message;
-            return;
-        }
-
-        _entries = await Journal.GetRecentAsync(30);
-        _form = new MoodEntryForm { Date = DateOnly.FromDateTime(DateTime.Today) };
-        _message = "Your check-in has been saved.";
-    }
-
-    private sealed class MoodEntryForm
-    {
-        public DateOnly Date { get; set; }
-        public MoodLevel Level { get; set; } = MoodLevel.Neutral;
-        public string Tags { get; set; } = string.Empty;
-        public string Note { get; set; } = string.Empty;
-    }
+    private static string FormatDuration(int? minutes) =>
+        minutes is null ? "Not logged" : $"{minutes.Value / 60}h {minutes.Value % 60:D2}m";
 }

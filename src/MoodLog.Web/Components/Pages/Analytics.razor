@@ -1,0 +1,161 @@
+﻿@page "/analytics"
+@using System.Globalization
+@using System.Text
+@using Microsoft.JSInterop
+@using MoodLog.Core.Models
+@using MoodLog.Core.Services
+@inject WellnessAnalyticsService AnalyticsService
+@inject IJSRuntime JS
+
+<PageTitle>Analytics | MoodLog</PageTitle>
+
+<main class="analytics-page">
+    <header class="analytics-header">
+        <div>
+            <p class="analytics-eyebrow">YOUR PERSONAL TRENDS</p>
+            <h1>Analytics</h1>
+            <p class="analytics-subtitle">Look back at your habits and notice what stands out.</p>
+        </div>
+        <div class="analytics-controls">
+            <label for="analytics-period">Time period</label>
+            <InputSelect id="analytics-period" class="form-select analytics-select"
+                         @bind-Value="_days" @bind-Value:after="LoadReportAsync">
+                <option value="7">Last 7 days</option>
+                <option value="30">Last 30 days</option>
+            </InputSelect>
+        </div>
+    </header>
+
+    @if (_report is not null)
+    {
+        <div class="analytics-period-label">
+            @_report.StartDate.ToString("MMM d", CultureInfo.InvariantCulture)
+            – @_report.EndDate.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)
+        </div>
+
+        <section class="analytics-summary" aria-label="Period averages and totals">
+            <article class="analytics-stat">
+                <span>Average mood</span>
+                <strong>@(_report.AverageMood is double mood ? $"{mood:F1} / 5" : "—")</strong>
+                <small>on logged days</small>
+            </article>
+            <article class="analytics-stat">
+                <span>Average water</span>
+                <strong>@(_report.AverageWaterMl.ToString("N0")) ml</strong>
+                <small>on days with entries</small>
+            </article>
+            <article class="analytics-stat">
+                <span>Average sleep</span>
+                <strong>@FormatDuration(_report.AverageSleepMinutes)</strong>
+                <small>on logged nights</small>
+            </article>
+            <article class="analytics-stat">
+                <span>Active time</span>
+                <strong>@FormatDuration(_report.TotalActivityMinutes)</strong>
+                <small>@_report.TotalSteps.ToString("N0") total steps</small>
+            </article>
+        </section>
+
+        <section class="analytics-charts" aria-label="Daily trends">
+            <ChartPanel Title="Mood" Unit="/ 5"
+                        Values="MoodValues" Labels="ChartLabels"
+                        Color="mood-chart" />
+            <ChartPanel Title="Water" Unit="ml"
+                        Values="WaterValues" Labels="ChartLabels"
+                        Color="water-chart" />
+            <ChartPanel Title="Sleep" Unit="hours"
+                        Values="SleepValues" Labels="ChartLabels"
+                        Color="sleep-chart" />
+            <ChartPanel Title="Activity" Unit="minutes"
+                        Values="ActivityValues" Labels="ChartLabels"
+                        Color="activity-chart" />
+        </section>
+
+        <section class="analytics-bottom">
+            <article class="analytics-card">
+                <div class="analytics-card-heading">
+                    <div>
+                        <p class="analytics-eyebrow">SMART INSIGHTS</p>
+                        <h2>What your log shows</h2>
+                    </div>
+                    <span aria-hidden="true">✦</span>
+                </div>
+                <ul class="analytics-insights">
+                    @foreach (var insight in _report.Insights)
+                    {
+                        <li>@insight</li>
+                    }
+                </ul>
+                <p class="analytics-disclaimer">Observations from your entries only; not medical diagnoses or treatment advice.</p>
+            </article>
+
+            <article class="analytics-card">
+                <div class="analytics-card-heading">
+                    <div>
+                        <p class="analytics-eyebrow">TAKE YOUR DATA WITH YOU</p>
+                        <h2>Export report</h2>
+                    </div>
+                    <span aria-hidden="true">↗</span>
+                </div>
+                <p class="analytics-subtitle">Download your daily summaries as a CSV file you can open in a spreadsheet.</p>
+                <button class="btn analytics-export" @onclick="ExportCsvAsync">Download CSV</button>
+                @if (!string.IsNullOrWhiteSpace(_message))
+                {
+                    <p class="analytics-feedback" role="status">@_message</p>
+                }
+            </article>
+        </section>
+    }
+</main>
+
+@code {
+    private int _days = 7;
+    private WellnessReport? _report;
+    private string? _message;
+    private IReadOnlyList<string> ChartLabels =>
+        _report!.Days.Select(day => day.Date.ToString(_days == 7 ? "ddd" : "MMM d", CultureInfo.InvariantCulture)).ToArray();
+    private IReadOnlyList<double?> MoodValues =>
+        _report!.Days.Select(day => day.AverageMood).ToArray();
+    private IReadOnlyList<double?> WaterValues =>
+        _report!.Days.Select(day => (double?)day.WaterConsumedMl).ToArray();
+    private IReadOnlyList<double?> SleepValues =>
+        _report!.Days.Select(day => day.SleepMinutes is int minutes ? (double?)(minutes / 60d) : null).ToArray();
+    private IReadOnlyList<double?> ActivityValues =>
+        _report!.Days.Select(day => (double?)day.ActivityMinutes).ToArray();
+
+    protected override Task OnInitializedAsync() => LoadReportAsync();
+
+    private async Task LoadReportAsync()
+    {
+        _report = await AnalyticsService.GetReportAsync(DateOnly.FromDateTime(DateTime.Today), _days);
+    }
+
+    private async Task ExportCsvAsync()
+    {
+        if (_report is null)
+        {
+            return;
+        }
+
+        var csv = new StringBuilder("Date,Mood (1-5),Water (ml),Water goal (ml),Sleep (minutes),Activity (minutes),Steps\r\n");
+        foreach (var day in _report.Days)
+        {
+            csv.Append(day.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append(',')
+                .Append(day.AverageMood?.ToString("F1", CultureInfo.InvariantCulture) ?? string.Empty).Append(',')
+                .Append(day.WaterConsumedMl).Append(',')
+                .Append(day.WaterGoalMl).Append(',')
+                .Append(day.SleepMinutes?.ToString(CultureInfo.InvariantCulture) ?? string.Empty).Append(',')
+                .Append(day.ActivityMinutes).Append(',')
+                .Append(day.Steps).Append("\r\n");
+        }
+
+        await JS.InvokeVoidAsync(
+            "moodLog.downloadCsv",
+            $"moodlog-{_days}-days-{DateTime.Today:yyyy-MM-dd}.csv",
+            csv.ToString());
+        _message = "Your report is ready to download.";
+    }
+
+    private static string FormatDuration(int? minutes) =>
+        minutes is null ? "—" : $"{minutes.Value / 60}h {minutes.Value % 60:D2}m";
+}

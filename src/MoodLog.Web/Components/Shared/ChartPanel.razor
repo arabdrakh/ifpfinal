@@ -1,0 +1,65 @@
+<article class="analytics-card chart-card">
+    <div class="chart-heading">
+        <h2>@Title</h2>
+        <span>@Unit</span>
+    </div>
+    <div class="trend-chart" role="img" aria-label="@($"{Title} daily chart for {Values.Count} days")">
+        @for (var index = 0; index < Values.Count; index++)
+        {
+            var value = Values[index];
+            <div class="chart-column" aria-label="@($"{Labels[index]}: {FormatValue(value)} {Unit}")">
+                <div class="chart-bar-track">
+                    <span class="chart-bar @Color" style="height: @GetHeight(value)%"></span>
+                </div>
+                @if (ShouldShowLabel(index))
+                {
+                    <span class="chart-label">@Labels[index]</span>
+                }
+            </div>
+        }
+    </div>
+    <p class="chart-summary">@Summary</p>
+</article>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Unit { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<double?> Values { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<string> Labels { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public string Color { get; set; } = string.Empty;
+
+    private double Maximum => Values.Where(value => value.HasValue).Select(value => value!.Value)
+        .DefaultIfEmpty(0)
+        .Max();
+
+    private double GetHeight(double? value) =>
+        !value.HasValue || value.Value <= 0 || Maximum <= 0
+            ? 0
+            : Math.Max(5, value.Value / Maximum * 100);
+
+    private bool ShouldShowLabel(int index) =>
+        Values.Count <= 7 || index % 5 == 0 || index == Values.Count - 1;
+
+    private static string FormatValue(double? value) =>
+        value?.ToString("0.#") ?? "not logged";
+
+    private string Summary
+    {
+        get
+        {
+            var values = Values.Where(value => value.HasValue).Select(value => value!.Value).ToArray();
+            return values.Length == 0
+                ? "No entries recorded in this period."
+                : $"Average on logged days: {values.Average():0.#} {Unit}.";
+        }
+    }
+}
