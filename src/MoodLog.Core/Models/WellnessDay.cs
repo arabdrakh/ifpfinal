@@ -6,5 +6,6 @@ public sealed record WellnessDay(
     long WaterConsumedMl,
     int WaterGoalMl,
     int? SleepMinutes,
+    bool HasActivity,
     int ActivityMinutes,
     long Steps);

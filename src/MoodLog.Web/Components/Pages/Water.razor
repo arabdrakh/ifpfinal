@@ -2,6 +2,7 @@
 @using MoodLog.Core.Models
 @using MoodLog.Core.Services
 @inject WaterTrackerService WaterTracker
+@inject ProfileSettingsService ProfileService
 
 <PageTitle>Water tracker | MoodLog</PageTitle>
 
@@ -122,8 +123,14 @@
     private IReadOnlyList<WaterLog> _logs = [];
     private WaterEntryForm _form = new();
     private string? _message;
+    private int _defaultWaterGoalMl = 2000;
 
-    protected override Task OnInitializedAsync() => LoadDayAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        var profile = await ProfileService.GetAsync();
+        _defaultWaterGoalMl = profile.DailyWaterGoalMl;
+        await LoadDayAsync();
+    }
 
     private async Task ChangeDateAsync()
     {
@@ -146,7 +153,7 @@
 
     private async Task LoadDayAsync()
     {
-        _progress = await WaterTracker.GetDailyProgressAsync(_date);
+        _progress = await WaterTracker.GetDailyProgressAsync(_date, _defaultWaterGoalMl);
         _logs = await WaterTracker.GetLogsForDateAsync(_date);
         _form.DailyGoalMl = _progress.DailyGoalMl;
     }

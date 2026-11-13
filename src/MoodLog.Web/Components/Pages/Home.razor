@@ -2,6 +2,7 @@
 @using MoodLog.Core.Models
 @using MoodLog.Core.Services
 @inject WellnessAnalyticsService Analytics
+@inject ProfileSettingsService ProfileService
 
 <PageTitle>Dashboard | MoodLog</PageTitle>
 
@@ -9,7 +10,7 @@
     <header class="dashboard-header">
         <div>
             <p class="dashboard-eyebrow">YOUR WELLNESS, AT A GLANCE</p>
-            <h1>Good @Greeting,</h1>
+            <h1>Good @Greeting, @_displayName</h1>
             <p class="dashboard-subtitle">A little progress is still progress. Here's your day so far.</p>
         </div>
         <span class="dashboard-date">@DateTime.Today.ToString("dddd, MMMM d")</span>
@@ -25,19 +26,21 @@
         <a class="dashboard-metric metric-water" href="water">
             <span class="metric-icon" aria-hidden="true">💧</span>
             <span class="metric-label">Water</span>
-            <strong>@(Today?.WaterConsumedMl ?? 0) <small>/ @(Today?.WaterGoalMl ?? 2000) ml</small></strong>
+            <strong>@(Today?.WaterConsumedMl ?? 0) <small>/ @DailyWaterGoal.ToString("N0") ml</small></strong>
             <span class="metric-link">Log water <span aria-hidden="true">→</span></span>
         </a>
         <a class="dashboard-metric metric-sleep" href="sleep">
             <span class="metric-icon" aria-hidden="true">🌙</span>
             <span class="metric-label">Sleep</span>
             <strong>@FormatDuration(Today?.SleepMinutes)</strong>
+            <small class="metric-goal">Goal: @(_profile.DailySleepGoalMinutes / 60) hours</small>
             <span class="metric-link">Log sleep <span aria-hidden="true">→</span></span>
         </a>
         <a class="dashboard-metric metric-activity" href="activity">
             <span class="metric-icon" aria-hidden="true">🏃</span>
             <span class="metric-label">Activity</span>
-            <strong>@(Today?.ActivityMinutes ?? 0) <small>min · @((Today?.Steps ?? 0).ToString("N0")) steps</small></strong>
+            <strong>@((Today?.Steps ?? 0).ToString("N0")) <small>/ @_profile.DailyStepGoal.ToString("N0") steps</small></strong>
+            <small class="metric-goal">@(Today?.ActivityMinutes ?? 0) active minutes</small>
             <span class="metric-link">Log activity <span aria-hidden="true">→</span></span>
         </a>
     </section>
@@ -77,7 +80,11 @@
 
 @code {
     private WellnessReport? _report;
+    private ProfileSettings _profile = ProfileSettings.Default;
+    private string _displayName => _profile.DisplayName;
     private WellnessDay? Today => _report?.Days.SingleOrDefault();
+    private int DailyWaterGoal =>
+        Today is { WaterConsumedMl: > 0 } day ? day.WaterGoalMl : _profile.DailyWaterGoalMl;
     private string Greeting => DateTime.Now.Hour switch
     {
         < 12 => "morning",
@@ -87,6 +94,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _profile = await ProfileService.GetAsync();
         _report = await Analytics.GetReportAsync(DateOnly.FromDateTime(DateTime.Today), 1);
     }
 

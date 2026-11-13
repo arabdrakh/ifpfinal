@@ -41,7 +41,7 @@
             </article>
             <article class="analytics-stat">
                 <span>Average water</span>
-                <strong>@(_report.AverageWaterMl.ToString("N0")) ml</strong>
+                <strong>@(_report.AverageWaterMl is long averageWater ? $"{averageWater:N0} ml" : "—")</strong>
                 <small>on days with entries</small>
             </article>
             <article class="analytics-stat">
@@ -117,11 +117,11 @@
     private IReadOnlyList<double?> MoodValues =>
         _report!.Days.Select(day => day.AverageMood).ToArray();
     private IReadOnlyList<double?> WaterValues =>
-        _report!.Days.Select(day => (double?)day.WaterConsumedMl).ToArray();
+        _report!.Days.Select(day => day.WaterConsumedMl > 0 ? (double?)day.WaterConsumedMl : null).ToArray();
     private IReadOnlyList<double?> SleepValues =>
         _report!.Days.Select(day => day.SleepMinutes is int minutes ? (double?)(minutes / 60d) : null).ToArray();
     private IReadOnlyList<double?> ActivityValues =>
-        _report!.Days.Select(day => (double?)day.ActivityMinutes).ToArray();
+        _report!.Days.Select(day => day.HasActivity ? (double?)day.ActivityMinutes : null).ToArray();
 
     protected override Task OnInitializedAsync() => LoadReportAsync();
 

@@ -26,6 +26,7 @@ public class WellnessAnalyticsTests
         Assert.Equal(500, trackedDay.WaterConsumedMl);
         Assert.Equal(2000, trackedDay.WaterGoalMl);
         Assert.Equal(480, trackedDay.SleepMinutes);
+        Assert.True(trackedDay.HasActivity);
         Assert.Equal(30, trackedDay.ActivityMinutes);
         Assert.Equal(2500, trackedDay.Steps);
         Assert.Equal(4, report.AverageMood);
@@ -71,6 +72,19 @@ public class WellnessAnalyticsTests
         Assert.Contains(report.Insights, insight => insight.Contains("sleep duration was lower", StringComparison.Ordinal));
         Assert.Contains(report.Insights, insight => insight.Contains("activity time increased", StringComparison.Ordinal));
         Assert.Contains(report.Insights, insight => insight.Contains("mood on 4 days", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task GetReportAsync_ShouldRepresentUntrackedAveragesAsMissing()
+    {
+        var service = new TestRepositories().CreateService();
+
+        var report = await service.GetReportAsync(new DateOnly(2026, 11, 14), 7);
+
+        Assert.Null(report.AverageMood);
+        Assert.Null(report.AverageWaterMl);
+        Assert.Null(report.AverageSleepMinutes);
+        Assert.Equal(0, report.TotalActivityMinutes);
     }
 
     [Theory]

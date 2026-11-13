@@ -5,7 +5,9 @@ window.moodLog = {
         const link = document.createElement("a");
         link.href = url;
         link.download = fileName;
+        document.body.append(link);
         link.click();
-        URL.revokeObjectURL(url);
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 };

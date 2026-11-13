@@ -5,7 +5,7 @@ public sealed record WellnessReport(
     DateOnly EndDate,
     IReadOnlyList<WellnessDay> Days,
     double? AverageMood,
-    long AverageWaterMl,
+    long? AverageWaterMl,
     int? AverageSleepMinutes,
     int TotalActivityMinutes,
     long TotalSteps,

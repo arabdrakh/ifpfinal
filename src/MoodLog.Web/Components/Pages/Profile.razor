@@ -1,0 +1,103 @@
+﻿@page "/profile"
+@using MoodLog.Core.Models
+@using MoodLog.Core.Services
+@inject ProfileSettingsService ProfileService
+
+<PageTitle>Profile | MoodLog</PageTitle>
+
+<main class="tracker-page">
+    <header class="tracker-header">
+        <div>
+            <p class="tracker-eyebrow">YOUR PERSONAL SPACE</p>
+            <h1>Profile & goals</h1>
+            <p class="tracker-subtitle">Make MoodLog feel like yours and set goals that work for you.</p>
+        </div>
+    </header>
+
+    <section class="tracker-card profile-card" aria-labelledby="profile-settings-title">
+        <h2 id="profile-settings-title">Personal settings</h2>
+        <p class="tracker-muted">Your profile and goals are stored locally with your MoodLog data.</p>
+
+        <EditForm Model="_form" OnSubmit="SaveAsync">
+            <label class="form-label" for="profile-name">Display name</label>
+            <InputText id="profile-name" class="form-control tracker-control"
+                       @bind-Value="_form.DisplayName" maxlength="40" />
+
+            <div class="profile-goals">
+                <div>
+                    <label class="form-label" for="profile-water-goal">Daily water goal</label>
+                    <div class="input-group">
+                        <InputNumber id="profile-water-goal" class="form-control tracker-control"
+                                     @bind-Value="_form.DailyWaterGoalMl" min="500" max="10000" />
+                        <span class="input-group-text tracker-unit">ml</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label" for="profile-sleep-goal">Daily sleep goal</label>
+                    <div class="input-group">
+                        <InputNumber id="profile-sleep-goal" class="form-control tracker-control"
+                                     @bind-Value="_form.DailySleepGoalHours" min="4" max="16" step="0.5" />
+                        <span class="input-group-text tracker-unit">hours</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label" for="profile-step-goal">Daily step goal</label>
+                    <div class="input-group">
+                        <InputNumber id="profile-step-goal" class="form-control tracker-control"
+                                     @bind-Value="_form.DailyStepGoal" min="1000" max="50000" step="500" />
+                        <span class="input-group-text tracker-unit">steps</span>
+                    </div>
+                </div>
+            </div>
+
+            <p class="tracker-hint">Goals are personal tracking preferences, not medical recommendations.</p>
+            <button class="btn tracker-submit mt-3" type="submit">Save settings</button>
+        </EditForm>
+
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            <p class="@(_isError ? "profile-error" : "tracker-feedback")" role="status">@_message</p>
+        }
+    </section>
+</main>
+
+@code {
+    private ProfileForm _form = new();
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var settings = await ProfileService.GetAsync();
+        _form = new ProfileForm
+        {
+            DisplayName = settings.DisplayName,
+            DailyWaterGoalMl = settings.DailyWaterGoalMl,
+            DailySleepGoalHours = settings.DailySleepGoalMinutes / 60d,
+            DailyStepGoal = settings.DailyStepGoal
+        };
+    }
+
+    private async Task SaveAsync()
+    {
+        var sleepMinutes = (int)Math.Round(_form.DailySleepGoalHours * 60);
+        var result = await ProfileService.SaveAsync(
+            _form.DisplayName,
+            _form.DailyWaterGoalMl,
+            sleepMinutes,
+            _form.DailyStepGoal);
+
+        _isError = result.IsFailure;
+        _message = result.IsFailure
+            ? result.Error.Message
+            : "Your profile and goals have been saved.";
+    }
+
+    private sealed class ProfileForm
+    {
+        public string DisplayName { get; set; } = ProfileSettings.Default.DisplayName;
+        public int DailyWaterGoalMl { get; set; } = ProfileSettings.Default.DailyWaterGoalMl;
+        public double DailySleepGoalHours { get; set; } = ProfileSettings.Default.DailySleepGoalMinutes / 60d;
+        public int DailyStepGoal { get; set; } = ProfileSettings.Default.DailyStepGoal;
+    }
+}

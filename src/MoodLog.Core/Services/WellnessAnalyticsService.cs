@@ -52,6 +52,7 @@ public sealed class WellnessAnalyticsService(
                     water?.Consumed ?? 0,
                     water?.Goal ?? 2000,
                     sleepByDate.GetValueOrDefault(date),
+                    activity is not null,
                     activity?.Minutes ?? 0,
                     activity?.Steps ?? 0);
             })
@@ -81,7 +82,7 @@ public sealed class WellnessAnalyticsService(
             endDate,
             reportDays,
             moodValues.Length == 0 ? null : moodValues.Average(),
-            waterValues.Length == 0 ? 0 : (long)Math.Round(waterValues.Average()),
+            waterValues.Length == 0 ? null : (long)Math.Round(waterValues.Average()),
             sleepValues.Length == 0 ? null : (int)Math.Round(sleepValues.Average()),
             reportDays.Sum(day => day.ActivityMinutes),
             reportDays.Sum(day => day.Steps),
