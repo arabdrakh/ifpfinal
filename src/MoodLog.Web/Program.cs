@@ -1,10 +1,12 @@
 using MoodLog.Web.Components;
+using MoodLog.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddMoodLogInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
