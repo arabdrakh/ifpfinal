@@ -1,0 +1,159 @@
+﻿@page "/water"
+@using MoodLog.Core.Models
+@using MoodLog.Core.Services
+@inject WaterTrackerService WaterTracker
+
+<PageTitle>Water tracker | MoodLog</PageTitle>
+
+<main class="water-page">
+    <header class="water-header">
+        <div>
+            <p class="water-eyebrow">DAILY WELLNESS</p>
+            <h1>Water tracker</h1>
+            <p class="water-subtitle">Keep track of your water intake, one glass at a time.</p>
+        </div>
+        <label class="water-date-label" for="water-date">
+            <span>Tracking date</span>
+            <InputDate id="water-date" class="form-control water-control"
+                       @bind-Value="_date" @bind-Value:after="ChangeDateAsync" />
+        </label>
+    </header>
+
+    <div class="water-grid">
+        <section class="water-card water-progress-card" aria-labelledby="water-progress-title">
+            <div class="water-progress-heading">
+                <div>
+                    <p class="water-eyebrow">TODAY'S PROGRESS</p>
+                    <h2 id="water-progress-title">Your hydration</h2>
+                </div>
+                <span class="water-drop" aria-hidden="true">💧</span>
+            </div>
+
+            <p class="water-total"><strong>@_progress.ConsumedMl</strong><span> ml</span></p>
+            <p class="water-goal">of @_progress.DailyGoalMl ml daily goal</p>
+            <div class="progress water-progress" role="progressbar"
+                 aria-label="Daily water intake progress"
+                 aria-valuenow="@_progress.ProgressPercent" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar water-progress-bar" style="width: @_progress.ProgressPercent%"></div>
+            </div>
+            <div class="water-progress-caption">
+                <span>@_progress.ProgressPercent% completed</span>
+                @if (_progress.GoalReached)
+                {
+                    <strong>Daily goal reached</strong>
+                }
+                else
+                {
+                    <span>@_progress.RemainingMl ml to go</span>
+                }
+            </div>
+
+            <div class="water-goal-note">
+                <span aria-hidden="true">✦</span>
+                @(_progress.GoalReached
+                    ? "You reached your hydration goal for this day."
+                    : "Small, regular sips can make tracking feel easier.")
+            </div>
+        </section>
+
+        <section class="water-card water-form-card" aria-labelledby="water-form-title">
+            <h2 id="water-form-title">Add water</h2>
+            <p class="water-muted">Log a drink for the selected date.</p>
+
+            <EditForm Model="_form" OnSubmit="AddWaterAsync">
+                <label class="form-label" for="water-amount">Amount</label>
+                <div class="input-group">
+                    <InputNumber id="water-amount" class="form-control water-control"
+                                 @bind-Value="_form.AmountMl" min="1" max="5000" />
+                    <span class="input-group-text water-unit">ml</span>
+                </div>
+
+                <label class="form-label mt-3" for="water-goal">Daily goal</label>
+                <div class="input-group">
+                    <InputNumber id="water-goal" class="form-control water-control"
+                                 @bind-Value="_form.DailyGoalMl" min="500" max="10000" />
+                    <span class="input-group-text water-unit">ml</span>
+                </div>
+                <p class="water-hint">Amount: 1–5000 ml · Goal: 500–10000 ml</p>
+
+                <button class="btn water-submit mt-3" type="submit">Add to daily total</button>
+            </EditForm>
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <p class="water-feedback" role="status">@_message</p>
+            }
+        </section>
+    </div>
+
+    <section class="water-card water-history-card" aria-labelledby="water-history-title">
+        <div class="water-history-heading">
+            <div>
+                <h2 id="water-history-title">Today's drinks</h2>
+                <p class="water-muted">Entries for @_date.ToString("MMMM d, yyyy")</p>
+            </div>
+            <span class="water-entry-count">@_logs.Count</span>
+        </div>
+
+        @if (_logs.Count == 0)
+        {
+            <p class="water-empty">No drinks logged for this day yet.</p>
+        }
+        else
+        {
+            <ul class="water-log-list">
+                @foreach (var log in _logs)
+                {
+                    <li>
+                        <span class="water-log-icon" aria-hidden="true">💧</span>
+                        <span>Water</span>
+                        <time datetime="@log.LoggedAt.ToString("O")">@log.LoggedAt.ToLocalTime().ToString("h:mm tt")</time>
+                        <strong>@log.AmountMl ml</strong>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+</main>
+
+@code {
+    private DateOnly _date = DateOnly.FromDateTime(DateTime.Today);
+    private WaterProgress _progress = new(0, 2000, 2000, 0, false);
+    private IReadOnlyList<WaterLog> _logs = [];
+    private WaterEntryForm _form = new();
+    private string? _message;
+
+    protected override Task OnInitializedAsync() => LoadDayAsync();
+
+    private async Task ChangeDateAsync()
+    {
+        _message = null;
+        await LoadDayAsync();
+    }
+
+    private async Task AddWaterAsync()
+    {
+        var result = await WaterTracker.AddAsync(_date, _form.AmountMl, _form.DailyGoalMl);
+        if (result.IsFailure)
+        {
+            _message = result.Error.Message;
+            return;
+        }
+
+        _message = $"Added {_form.AmountMl} ml to your daily total.";
+        await LoadDayAsync();
+    }
+
+    private async Task LoadDayAsync()
+    {
+        _progress = await WaterTracker.GetDailyProgressAsync(_date);
+        _logs = await WaterTracker.GetLogsForDateAsync(_date);
+        _form.DailyGoalMl = _progress.DailyGoalMl;
+    }
+
+    private sealed class WaterEntryForm
+    {
+        public int AmountMl { get; set; } = 250;
+        public int DailyGoalMl { get; set; } = 2000;
+    }
+}

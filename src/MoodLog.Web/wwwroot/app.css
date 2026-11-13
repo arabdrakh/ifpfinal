@@ -274,3 +274,261 @@ body {
         flex-direction: column;
     }
 }
+
+.water-page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 3.5rem 1.25rem;
+}
+
+.water-header, .water-progress-heading, .water-progress-caption, .water-history-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.water-header {
+    margin-bottom: 2rem;
+}
+
+.water-header h1 {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+}
+
+.water-eyebrow, .water-subtitle, .water-muted, .water-hint {
+    color: #71817a;
+}
+
+.water-eyebrow {
+    margin-bottom: 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+.water-subtitle {
+    margin: 0.55rem 0 0;
+}
+
+.water-date-label {
+    display: grid;
+    gap: 0.4rem;
+    color: #587268;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.water-date-label .water-control {
+    min-width: 180px;
+}
+
+.water-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.75fr);
+    align-items: start;
+    gap: 1.25rem;
+}
+
+.water-card {
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid #e7ece8;
+    border-radius: 1.25rem;
+    background: #fff;
+    box-shadow: 0 12px 35px rgb(32 53 47 / 5%);
+}
+
+.water-card h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.water-progress-card {
+    background: linear-gradient(145deg, #fff 45%, #edf7f6);
+}
+
+.water-drop {
+    display: grid;
+    width: 3rem;
+    height: 3rem;
+    place-items: center;
+    border-radius: 1rem;
+    background: #e6f4f4;
+    font-size: 1.4rem;
+}
+
+.water-total {
+    margin: 2rem 0 0;
+    color: #20352f;
+}
+
+.water-total strong {
+    font-size: clamp(2.5rem, 7vw, 4rem);
+    letter-spacing: -0.06em;
+}
+
+.water-total span, .water-goal {
+    color: #71817a;
+}
+
+.water-goal {
+    margin: 0.1rem 0 1.2rem;
+}
+
+.water-progress {
+    height: 0.8rem;
+    border-radius: 99px;
+    background: #e4eeeb;
+}
+
+.water-progress-bar {
+    border-radius: inherit;
+    background: linear-gradient(90deg, #3f8e93, #55b3a5);
+    transition: width 180ms ease;
+}
+
+.water-progress-caption {
+    margin-top: 0.65rem;
+    color: #587268;
+    font-size: 0.83rem;
+}
+
+.water-goal-note {
+    display: flex;
+    gap: 0.55rem;
+    margin-top: 2rem;
+    padding: 0.9rem;
+    border-radius: 0.8rem;
+    background: #f0f7f5;
+    color: #426d58;
+    font-size: 0.86rem;
+}
+
+.water-form-card > .water-muted, .water-history-heading .water-muted {
+    margin: 0.4rem 0 1.4rem;
+}
+
+.water-control {
+    border-color: #dce5df;
+    border-radius: 0.7rem;
+    padding: 0.7rem 0.85rem;
+}
+
+.water-control:focus {
+    border-color: #58a6a4;
+    box-shadow: 0 0 0 0.2rem rgb(63 142 147 / 18%);
+}
+
+.water-unit {
+    border-color: #dce5df;
+    border-radius: 0 0.7rem 0.7rem 0;
+    background: #f7faf8;
+    color: #587268;
+}
+
+.water-hint {
+    margin: 0.45rem 0 0;
+    font-size: 0.76rem;
+}
+
+.water-submit {
+    width: 100%;
+    padding: 0.75rem;
+    border: 0;
+    border-radius: 0.7rem;
+    background: #347d83;
+    color: #fff;
+    font-weight: 600;
+}
+
+.water-submit:hover, .water-submit:focus {
+    background: #28696f;
+    color: #fff;
+}
+
+.water-feedback {
+    margin: 1rem 0 0;
+    color: #316b54;
+    font-size: 0.9rem;
+}
+
+.water-history-card {
+    margin-top: 1.25rem;
+}
+
+.water-entry-count {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 50%;
+    background: #e6f4f4;
+    color: #347d83;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.water-empty {
+    margin: 0;
+    padding: 1.5rem 0;
+    color: #71817a;
+    text-align: center;
+}
+
+.water-log-list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.water-log-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid #edf0ed;
+}
+
+.water-log-list li:last-child {
+    border-bottom: 0;
+}
+
+.water-log-icon {
+    display: grid;
+    width: 2.4rem;
+    height: 2.4rem;
+    place-items: center;
+    border-radius: 0.8rem;
+    background: #e6f4f4;
+}
+
+.water-log-list time {
+    margin-left: auto;
+    color: #71817a;
+    font-size: 0.83rem;
+}
+
+.water-log-list strong {
+    min-width: 5rem;
+    text-align: right;
+}
+
+@media (max-width: 760px) {
+    .water-page {
+        padding-top: 2rem;
+    }
+
+    .water-header, .water-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .water-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
