@@ -24,7 +24,7 @@
             <h2 id="sleep-form-title">Log a night's sleep</h2>
             <p class="tracker-muted">Enter the time you went to bed and woke up.</p>
 
-            <EditForm Model="_form" OnValidSubmit="SaveAsync">
+            <EditForm Model="_form" OnValidSubmit="SaveAsync" FormName="sleep-tracker">
                 <DataAnnotationsValidator />
                 <label class="form-label" for="sleep-bedtime">Bedtime</label>
                 <InputDate id="sleep-bedtime" Type="InputDateType.Time"

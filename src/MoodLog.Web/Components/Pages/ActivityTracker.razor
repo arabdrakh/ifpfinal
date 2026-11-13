@@ -24,7 +24,7 @@
             <h2 id="activity-form-title">Log an activity</h2>
             <p class="tracker-muted">Record a workout, walk, or any movement.</p>
 
-            <EditForm Model="_form" OnValidSubmit="SaveAsync">
+            <EditForm Model="_form" OnValidSubmit="SaveAsync" FormName="activity-tracker">
                 <DataAnnotationsValidator />
                 <label class="form-label" for="activity-type">Activity</label>
                 <InputSelect id="activity-type" class="form-select tracker-control" @bind-Value="_form.Type">

@@ -18,7 +18,7 @@
         <h2 id="profile-settings-title">Personal settings</h2>
         <p class="tracker-muted">Your profile and goals are stored locally with your MoodLog data.</p>
 
-        <EditForm Model="_form" OnValidSubmit="SaveAsync">
+        <EditForm Model="_form" OnValidSubmit="SaveAsync" FormName="profile-settings">
             <DataAnnotationsValidator />
             <label class="form-label" for="profile-name">Display name</label>
             <InputText id="profile-name" class="form-control tracker-control"

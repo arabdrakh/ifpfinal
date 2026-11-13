@@ -60,7 +60,7 @@
             <h2 id="water-form-title">Add water</h2>
             <p class="water-muted">Log a drink for the selected date.</p>
 
-            <EditForm Model="_form" OnValidSubmit="AddWaterAsync">
+            <EditForm Model="_form" OnValidSubmit="AddWaterAsync" FormName="water-tracker">
                 <DataAnnotationsValidator />
                 <label class="form-label" for="water-amount">Amount</label>
                 <div class="input-group">

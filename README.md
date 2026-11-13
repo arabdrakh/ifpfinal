@@ -50,13 +50,31 @@ On the first start, MoodLog creates the SQLite database and applies its migratio
 
 ## Run the tests
 
-Automated tests help catch bugs when features change. They check validation rules, tracking services, analytics, and SQLite persistence and migrations. GitHub Actions runs the solution tests on Windows, Linux, and macOS. The project does not yet include automated browser or end-to-end tests.
+Automated tests help catch bugs when features change. They check validation rules, tracking services, analytics, and SQLite persistence and migrations. GitHub Actions runs the solution tests on Windows, Linux, and macOS. Browser end-to-end tests use Playwright to verify saving a mood check-in, persisting it after reload, and applying profile settings to the dashboard.
 
 From the project root, run:
 
 ```bash
 dotnet test tests/MoodLog.Tests/MoodLog.Tests.csproj
 ```
+
+To run the browser end-to-end tests, build the test project and install Playwright's Chromium browser once. On Windows, use PowerShell:
+
+```powershell
+dotnet build tests/MoodLog.E2E/MoodLog.E2E.csproj
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\MoodLog.E2E\bin\Debug\net10.0\playwright.ps1 install chromium
+dotnet test tests/MoodLog.E2E/MoodLog.E2E.csproj --no-build
+```
+
+On Linux or macOS, use PowerShell 7 (`pwsh`) for the browser install command:
+
+```bash
+dotnet build tests/MoodLog.E2E/MoodLog.E2E.csproj
+pwsh tests/MoodLog.E2E/bin/Debug/net10.0/playwright.ps1 install chromium
+dotnet test tests/MoodLog.E2E/MoodLog.E2E.csproj --no-build
+```
+
+The browser tests start the web app with a temporary SQLite database and remove that database when the test run finishes.
 
 ## Check the app on a phone
 

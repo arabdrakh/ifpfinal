@@ -20,7 +20,7 @@
             <h2>How are you feeling?</h2>
             <p class="mood-muted">Take a moment to check in with yourself.</p>
 
-            <EditForm Model="_form" OnValidSubmit="SaveAsync">
+            <EditForm Model="_form" OnValidSubmit="SaveAsync" FormName="mood-journal">
                 <DataAnnotationsValidator />
                 <label class="form-label" for="entry-date">Date</label>
                 <InputDate id="entry-date" class="form-control mood-control" @bind-Value="_form.Date" />
