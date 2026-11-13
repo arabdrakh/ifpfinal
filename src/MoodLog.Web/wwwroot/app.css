@@ -1106,6 +1106,10 @@ body {
         padding-top: 2rem;
     }
 
+    .dashboard-metrics {
+        grid-template-columns: 1fr;
+    }
+
     .dashboard-header, .analytics-header {
         align-items: flex-start;
         flex-direction: column;

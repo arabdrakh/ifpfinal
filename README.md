@@ -63,10 +63,10 @@ dotnet test tests/MoodLog.Tests/MoodLog.Tests.csproj
 For a quick responsive-layout check, open the browser's developer tools and switch to its mobile device mode. To open the app on a phone connected to the same trusted Wi-Fi network, run this command from Git Bash in the project root:
 
 ```bash
-ASPNETCORE_URLS="http://0.0.0.0:5158" dotnet run --no-launch-profile --project src/MoodLog.Web/MoodLog.Web.csproj
+ASPNETCORE_URLS="http://0.0.0.0:5158" ASPNETCORE_ENVIRONMENT=Development dotnet run --no-launch-profile --project src/MoodLog.Web/MoodLog.Web.csproj
 ```
 
-Keep the terminal open, find the computer's local IP address, and open `http://<computer-ip>:5158` on the phone. Allow access through the firewall only on a trusted private network. Press `Ctrl+C` to stop the app after testing.
+The development environment is needed for the app's local CSS assets when running with `--no-launch-profile`. Keep the terminal open, find the computer's local IP address, and open `http://<computer-ip>:5158` on the phone. Allow access through the firewall only on a trusted private network. Press `Ctrl+C` to stop the app after testing.
 
 
 ## Project structure
