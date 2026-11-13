@@ -120,3 +120,7 @@ Both team members contributed jointly to planning, implementation, testing, and 
 ![alt text](screenshots/image-6.png)
 
 ![alt text](screenshots/image-7.png)
+
+![alt text](screenshots/image-8.png)
+
+![alt text](screenshots/image-9.png)
