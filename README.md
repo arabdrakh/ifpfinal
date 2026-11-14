@@ -131,22 +131,18 @@ Both team members contributed jointly to planning, implementation, testing, and 
 
 ## Screenshots
 
-![MoodLog dashboard showing daily mood, water, sleep, and activity summaries](screenshots/image.png)
+Desktop:
 
-![Mood journal with mood check-in and recent entries](screenshots/image-1.png)
+![alt text](screenshots/image.png)
+![alt text](screenshots/image-1.png)
+![alt text](screenshots/image-2.png)
+![alt text](screenshots/image-3.png)
+![alt text](screenshots/image-4.png)
+![alt text](screenshots/image-5.png)
+![alt text](screenshots/image-6.png)
 
-![Water tracker showing daily hydration progress and logged drinks](screenshots/image-2.png)
+Mobile phone:
 
-![Sleep tracker with sleep duration and recent sleep entries](screenshots/image-3.png)
-
-![Activity tracker with activity logging and daily movement totals](screenshots/image-4.png)
-
-![Analytics page showing wellness trends, smart insights, and CSV export](screenshots/image-5.png)
-
-![Profile page for personal details and daily wellness goals](screenshots/image-6.png)
-
-![MoodLog dashboard on a mobile screen with the navigation menu open](screenshots/image-7.png)
-
-![MoodLog dashboard on a mobile screen with its daily summary cards](screenshots/image-8.png)
-
-![MoodLog dashboard on a mobile screen showing mood, water, sleep, and activity cards](screenshots/image-9.png)
+![alt text](screenshots/image-7.png)
+![alt text](screenshots/image-8.png)
+![alt text](screenshots/image-9.png)
