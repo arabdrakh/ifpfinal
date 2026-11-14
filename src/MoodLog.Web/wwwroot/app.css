@@ -20,8 +20,9 @@ a, .btn-link {
     padding-top: 1.1rem;
 }
 
-h1:focus {
-    outline: none;
+h1:focus-visible {
+    outline: 3px solid #25694b;
+    outline-offset: 3px;
 }
 
 .valid.modified:not([type=checkbox]) {
@@ -89,7 +90,7 @@ body {
 }
 
 .mood-eyebrow, .mood-muted, .mood-subtitle, .mood-help {
-    color: #71817a;
+    color: #52655b;
 }
 
 .mood-eyebrow {
@@ -232,7 +233,7 @@ body {
 }
 
 .mood-entry-heading time {
-    color: #71817a;
+    color: #52655b;
     font-size: 0.82rem;
 }
 
@@ -296,7 +297,7 @@ body {
 }
 
 .water-eyebrow, .water-subtitle, .water-muted, .water-hint {
-    color: #71817a;
+    color: #52655b;
 }
 
 .water-eyebrow {
@@ -368,7 +369,7 @@ body {
 }
 
 .water-total span, .water-goal {
-    color: #71817a;
+    color: #52655b;
 }
 
 .water-goal {
@@ -470,7 +471,7 @@ body {
 .water-empty {
     margin: 0;
     padding: 1.5rem 0;
-    color: #71817a;
+    color: #52655b;
     text-align: center;
 }
 
@@ -504,7 +505,7 @@ body {
 
 .water-log-list time {
     margin-left: auto;
-    color: #71817a;
+    color: #52655b;
     font-size: 0.83rem;
 }
 
@@ -553,7 +554,7 @@ body {
 }
 
 .tracker-eyebrow, .tracker-subtitle, .tracker-muted, .tracker-hint {
-    color: #71817a;
+    color: #52655b;
 }
 
 .tracker-eyebrow {
@@ -660,7 +661,7 @@ body {
 .tracker-empty {
     margin: 0;
     padding: 2rem 0;
-    color: #71817a;
+    color: #52655b;
     text-align: center;
 }
 
@@ -699,7 +700,7 @@ body {
 }
 
 .tracker-list-main > span, .tracker-list time {
-    color: #71817a;
+    color: #52655b;
     font-size: 0.82rem;
 }
 
@@ -728,7 +729,7 @@ body {
 }
 
 .activity-summary span {
-    color: #71817a;
+    color: #52655b;
     font-size: 0.8rem;
 }
 
@@ -770,7 +771,7 @@ body {
 
 .dashboard-eyebrow, .analytics-eyebrow {
     margin-bottom: 0.6rem;
-    color: #71817a;
+    color: #52655b;
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.12em;
@@ -778,7 +779,7 @@ body {
 
 .dashboard-subtitle, .analytics-subtitle {
     margin: 0.55rem 0 0;
-    color: #71817a;
+    color: #52655b;
 }
 
 .dashboard-date {
@@ -827,7 +828,7 @@ body {
 
 .metric-label {
     margin-top: 1rem;
-    color: #71817a;
+    color: #52655b;
     font-size: 0.86rem;
 }
 
@@ -853,7 +854,7 @@ body {
 
 .metric-goal {
     margin-top: 0.3rem;
-    color: #71817a;
+    color: #52655b;
     font-size: 0.74rem;
 }
 
@@ -906,7 +907,7 @@ body {
 }
 
 .dashboard-disclaimer, .analytics-disclaimer {
-    color: #89968f;
+    color: #53685b;
     font-size: 0.75rem;
 }
 
@@ -962,7 +963,7 @@ body {
 
 .analytics-period-label {
     margin: -1rem 0 1rem;
-    color: #71817a;
+    color: #52655b;
     font-size: 0.85rem;
 }
 
@@ -983,7 +984,7 @@ body {
 }
 
 .analytics-stat > span, .analytics-stat > small {
-    color: #71817a;
+    color: #52655b;
     font-size: 0.8rem;
 }
 
@@ -1002,7 +1003,7 @@ body {
 }
 
 .chart-heading > span {
-    color: #71817a;
+    color: #52655b;
     font-size: 0.78rem;
 }
 
@@ -1050,7 +1051,7 @@ body {
     width: 100%;
     margin-top: 0.4rem;
     overflow: hidden;
-    color: #71817a;
+    color: #52655b;
     font-size: 0.64rem;
     text-align: center;
     text-overflow: ellipsis;
@@ -1059,7 +1060,7 @@ body {
 
 .chart-summary {
     margin: 0.9rem 0 0;
-    color: #71817a;
+    color: #52655b;
     font-size: 0.78rem;
 }
 
@@ -1144,5 +1145,76 @@ body {
 @media (max-width: 640px) {
     .profile-goals {
         grid-template-columns: 1fr;
+    }
+}
+/* Shared record actions: usable by keyboard, mouse, and touch. */
+.form-actions, .entry-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.form-actions .btn {
+    min-height: 44px;
+}
+
+.entry-actions {
+    margin-top: 0.7rem;
+}
+
+.water-log-list .entry-actions, .tracker-list .entry-actions {
+    margin: 0 0 0 0.5rem;
+}
+
+.log-action {
+    appearance: none;
+    background: #f3f8f5;
+    border: 1px solid #bad4c4;
+    border-radius: 0.55rem;
+    color: #285940;
+    cursor: pointer;
+    font-size: 0.83rem;
+    font-weight: 600;
+    min-height: 40px;
+    padding: 0.4rem 0.7rem;
+}
+
+.log-action:hover { background: #e4f3e9; }
+.log-action-danger { background: #fff8f7; border-color: #ebc4bf; color: #9d2721; }
+.log-action-danger:hover { background: #ffe9e6; }
+.log-action:disabled, .btn:disabled { cursor: wait; opacity: 0.62; }
+
+.tracker-error {
+    color: #a11c17;
+    margin: 1rem 0 0;
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+:where(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid #25694b;
+    outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+    .water-log-list li, .tracker-list li {
+        flex-wrap: wrap;
+    }
+    .water-log-list .entry-actions, .tracker-list .entry-actions {
+        width: 100%;
+        margin: 0.4rem 0 0;
+    }
+    .mood-page, .water-page, .tracker-page, .dashboard-page, .analytics-page {
+        padding-left: 0.65rem;
+        padding-right: 0.65rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

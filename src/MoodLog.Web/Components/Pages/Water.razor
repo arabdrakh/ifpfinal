@@ -1,8 +1,10 @@
-﻿@page "/water"
+@page "/water"
 @using MoodLog.Core.Models
 @using MoodLog.Core.Services
 @inject WaterTrackerService WaterTracker
 @inject ProfileSettingsService ProfileService
+@inject IJSRuntime JS
+@inject ILogger<Water> Logger
 
 <PageTitle>Water tracker | MoodLog</PageTitle>
 
@@ -60,7 +62,7 @@
             <h2 id="water-form-title">Add water</h2>
             <p class="water-muted">Log a drink for the selected date.</p>
 
-            <EditForm Model="_form" OnValidSubmit="AddWaterAsync" FormName="water-tracker">
+            <EditForm @key="_form" Model="_form" OnValidSubmit="AddWaterAsync" FormName="water-tracker">
                 <DataAnnotationsValidator />
                 <label class="form-label" for="water-amount">Amount</label>
                 <div class="input-group">
@@ -70,21 +72,19 @@
                 </div>
                 <ValidationMessage For="@(() => _form.AmountMl)" />
 
-                <label class="form-label mt-3" for="water-goal">Daily goal</label>
-                <div class="input-group">
-                    <InputNumber id="water-goal" class="form-control water-control"
-                                 @bind-Value="_form.DailyGoalMl" min="500" max="10000" />
-                    <span class="input-group-text water-unit">ml</span>
+                <p class="water-hint mt-3">Daily goal: @_defaultWaterGoalMl ml · <a href="profile">Change in Profile</a></p>
+                <div class="form-actions mt-3">
+                    <button class="btn water-submit" type="submit" disabled="@_saving">@(_editingId is null ? "Add to daily total" : "Save changes")</button>
+                    @if (_editingId is not null)
+                    {
+                        <button class="btn btn-outline-secondary" type="button" @onclick="CancelEdit" disabled="@_saving">Cancel</button>
+                    }
                 </div>
-                <ValidationMessage For="@(() => _form.DailyGoalMl)" />
-                <p class="water-hint">Amount: 1–5000 ml · Goal: 500–10000 ml</p>
-
-                <button class="btn water-submit mt-3" type="submit">Add to daily total</button>
             </EditForm>
 
             @if (!string.IsNullOrWhiteSpace(_message))
             {
-                <p class="water-feedback" role="status">@_message</p>
+                <p class="@(_isError ? "tracker-error" : "water-feedback")" role="status">@_message</p>
             }
         </section>
     </div>
@@ -112,6 +112,9 @@
                         <span>Water</span>
                         <time datetime="@log.LoggedAt.ToString("O")">@log.LoggedAt.ToLocalTime().ToString("h:mm tt")</time>
                         <strong>@log.AmountMl ml</strong>
+                        <EntryActions Label="water entry" Busy="_saving"
+                                              OnEdit="() => EditEntry(log)"
+                                              OnDelete="() => DeleteAsync(log.Id)" />
                     </li>
                 }
             </ul>
@@ -124,48 +127,110 @@
     private WaterProgress _progress = new(0, 2000, 2000, 0, false);
     private IReadOnlyList<WaterLog> _logs = [];
     private WaterEntryForm _form = new();
+    private Guid? _editingId;
     private string? _message;
+    private bool _isError;
+    private bool _saving;
     private int _defaultWaterGoalMl = 2000;
 
-    protected override async Task OnInitializedAsync()
-    {
-        var profile = await ProfileService.GetAsync();
-        _defaultWaterGoalMl = profile.DailyWaterGoalMl;
-        await LoadDayAsync();
-    }
+    protected override async Task OnInitializedAsync() => await LoadDayAsync();
 
     private async Task ChangeDateAsync()
     {
-        _message = null;
+        CancelEdit();
         await LoadDayAsync();
+    }
+
+    private void EditEntry(WaterLog log)
+    {
+        _editingId = log.Id;
+        _form = new WaterEntryForm { AmountMl = log.AmountMl };
+        _message = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _form = new WaterEntryForm();
+        _message = null;
     }
 
     private async Task AddWaterAsync()
     {
-        var result = await WaterTracker.AddAsync(_date, _form.AmountMl, _form.DailyGoalMl);
-        if (result.IsFailure)
+        if (_saving) return;
+        _saving = true;
+        try
         {
-            _message = result.Error.Message;
-            return;
-        }
+            var profile = await ProfileService.GetAsync();
+            _defaultWaterGoalMl = profile.DailyWaterGoalMl;
+            var amount = _form.AmountMl;
+            var result = _editingId is Guid id
+                ? await WaterTracker.UpdateAsync(id, _date, amount, _defaultWaterGoalMl)
+                : await WaterTracker.AddAsync(_date, amount, _defaultWaterGoalMl);
+            _isError = result.IsFailure;
+            if (_isError) { _message = result.Error.Message; return; }
 
-        _message = $"Added {_form.AmountMl} ml to your daily total.";
-        await LoadDayAsync();
+            var edited = _editingId is not null;
+            CancelEdit();
+            await LoadDayAsync();
+            if (!_isError) _message = edited ? "Water entry updated." : $"Added {amount} ml to your daily total.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to save water entry");
+            _isError = true;
+            _message = "Could not save water. Please try again.";
+        }
+        finally { _saving = false; }
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        if (_saving) return;
+        try
+        {
+            // JS interop can fail if the browser disconnects; keep it inside try/catch.
+            if (!await JS.InvokeAsync<bool>("confirm", "Delete this water entry? This cannot be undone.")) return;
+            _saving = true;
+            var result = await WaterTracker.DeleteAsync(id);
+            _isError = result.IsFailure;
+            _message = _isError ? result.Error.Message : "Water entry deleted.";
+            if (!_isError)
+            {
+                if (_editingId == id) CancelEdit();
+                await LoadDayAsync();
+                if (!_isError) _message = "Water entry deleted.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to delete water entry");
+            _isError = true;
+            _message = "Could not delete water. Please try again.";
+        }
+        finally { _saving = false; }
     }
 
     private async Task LoadDayAsync()
     {
-        _progress = await WaterTracker.GetDailyProgressAsync(_date, _defaultWaterGoalMl);
-        _logs = await WaterTracker.GetLogsForDateAsync(_date);
-        _form.DailyGoalMl = _progress.DailyGoalMl;
+        try
+        {
+            _defaultWaterGoalMl = (await ProfileService.GetAsync()).DailyWaterGoalMl;
+            _progress = await WaterTracker.GetDailyProgressAsync(_date, _defaultWaterGoalMl);
+            _logs = await WaterTracker.GetLogsForDateAsync(_date);
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to load water history");
+            _isError = true;
+            _message = "Could not load water records. Please refresh the page.";
+        }
     }
 
     private sealed class WaterEntryForm
     {
         [Range(1, 5000, ErrorMessage = "Amount must be between 1 and 5000 ml.")]
         public int AmountMl { get; set; } = 250;
-
-        [Range(500, 10000, ErrorMessage = "Daily goal must be between 500 and 10000 ml.")]
-        public int DailyGoalMl { get; set; } = 2000;
     }
 }

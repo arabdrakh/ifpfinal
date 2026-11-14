@@ -1,7 +1,9 @@
-﻿@page "/activity"
+@page "/activity"
 @using MoodLog.Core.Models
 @using MoodLog.Core.Services
 @inject ActivityTrackerService ActivityService
+@inject IJSRuntime JS
+@inject ILogger<ActivityTracker> Logger
 
 <PageTitle>Activity tracker | MoodLog</PageTitle>
 
@@ -15,7 +17,7 @@
         <label class="tracker-date-label" for="activity-date">
             <span>Activity date</span>
             <InputDate id="activity-date" class="form-control tracker-control"
-                       @bind-Value="_date" @bind-Value:after="LoadEntriesAsync" />
+                       @bind-Value="_date" @bind-Value:after="ChangeDateAsync" />
         </label>
     </header>
 
@@ -24,7 +26,7 @@
             <h2 id="activity-form-title">Log an activity</h2>
             <p class="tracker-muted">Record a workout, walk, or any movement.</p>
 
-            <EditForm Model="_form" OnValidSubmit="SaveAsync" FormName="activity-tracker">
+            <EditForm @key="_form" Model="_form" OnValidSubmit="SaveAsync" FormName="activity-tracker">
                 <DataAnnotationsValidator />
                 <label class="form-label" for="activity-type">Activity</label>
                 <InputSelect id="activity-type" class="form-select tracker-control" @bind-Value="_form.Type">
@@ -49,12 +51,18 @@
                 <ValidationMessage For="@(() => _form.Steps)" />
                 <p class="tracker-hint">Duration: 1–1440 minutes · Steps: up to 100000</p>
 
-                <button class="btn tracker-submit mt-3" type="submit">Save activity</button>
+                <div class="form-actions mt-3">
+                    <button class="btn tracker-submit" type="submit" disabled="@_saving">@(_editingId is null ? "Save activity" : "Save changes")</button>
+                    @if (_editingId is not null)
+                    {
+                        <button class="btn btn-outline-secondary" type="button" @onclick="CancelEdit" disabled="@_saving">Cancel</button>
+                    }
+                </div>
             </EditForm>
 
             @if (!string.IsNullOrWhiteSpace(_message))
             {
-                <p class="tracker-feedback" role="status">@_message</p>
+                <p class="@(_isError ? "tracker-error" : "tracker-feedback")" role="status">@_message</p>
             }
         </section>
 
@@ -88,6 +96,9 @@
                                 <span>@entry.DurationMinutes min · @entry.Steps.ToString("N0") steps</span>
                             </div>
                             <time datetime="@entry.LoggedAt.ToString("O")">@entry.LoggedAt.ToLocalTime().ToString("h:mm tt")</time>
+                            <EntryActions Label="activity entry" Busy="_saving"
+                                              OnEdit="() => EditEntry(entry)"
+                                              OnDelete="() => DeleteAsync(entry.Id)" />
                         </li>
                     }
                 </ul>
@@ -100,42 +111,111 @@
     private DateOnly _date = DateOnly.FromDateTime(DateTime.Today);
     private IReadOnlyList<ActivityLog> _entries = [];
     private ActivityForm _form = new();
+    private Guid? _editingId;
     private string? _message;
+    private bool _isError;
+    private bool _saving;
 
     private int _totalMinutes => _entries.Sum(entry => entry.DurationMinutes);
     private long _totalSteps => _entries.Sum(entry => (long)entry.Steps);
 
     protected override Task OnInitializedAsync() => LoadEntriesAsync();
 
+    private void EditEntry(ActivityLog entry)
+    {
+        _editingId = entry.Id;
+        _form = new ActivityForm
+        {
+            Type = entry.Type,
+            DurationMinutes = entry.DurationMinutes,
+            Steps = entry.Steps
+        };
+        _message = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _form = new ActivityForm();
+        _message = null;
+    }
+
+    private async Task ChangeDateAsync()
+    {
+        CancelEdit();
+        await LoadEntriesAsync();
+    }
+
     private async Task SaveAsync()
     {
-        var result = await ActivityService.AddAsync(
-            _date,
-            _form.Type,
-            _form.DurationMinutes,
-            _form.Steps);
-        if (result.IsFailure)
+        if (_saving) return;
+        _saving = true;
+        try
         {
-            _message = result.Error.Message;
-            return;
-        }
+            var result = _editingId is Guid id
+                ? await ActivityService.UpdateAsync(id, _date, _form.Type, _form.DurationMinutes, _form.Steps)
+                : await ActivityService.AddAsync(_date, _form.Type, _form.DurationMinutes, _form.Steps);
+            _isError = result.IsFailure;
+            if (_isError) { _message = result.Error.Message; return; }
 
-        _message = "Activity saved.";
-        _form = new ActivityForm();
-        await LoadEntriesAsync();
+            var edited = _editingId is not null;
+            CancelEdit();
+            await LoadEntriesAsync();
+            if (!_isError) _message = edited ? "Activity updated." : "Activity saved.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to save activity entry");
+            _isError = true;
+            _message = "Could not save activity. Please try again.";
+        }
+        finally { _saving = false; }
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        if (_saving) return;
+        try
+        {
+            // JS interop can fail if the browser disconnects; keep it inside try/catch.
+            if (!await JS.InvokeAsync<bool>("confirm", "Delete this activity? This cannot be undone.")) return;
+            _saving = true;
+            var result = await ActivityService.DeleteAsync(id);
+            _isError = result.IsFailure;
+            _message = _isError ? result.Error.Message : "Activity deleted.";
+            if (!_isError)
+            {
+                if (_editingId == id) CancelEdit();
+                await LoadEntriesAsync();
+                if (!_isError) _message = "Activity deleted.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to delete activity entry");
+            _isError = true;
+            _message = "Could not delete activity. Please try again.";
+        }
+        finally { _saving = false; }
     }
 
     private async Task LoadEntriesAsync()
     {
-        _entries = await ActivityService.GetForDateAsync(_date);
+        try
+        {
+            _entries = await ActivityService.GetForDateAsync(_date);
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to load activity history");
+            _isError = true;
+            _message = "Could not load activity history. Please refresh the page.";
+        }
     }
 
     private static string FormatType(ActivityType type) =>
-        type.ToString() switch
-        {
-            "Other" => "Other activity",
-            _ => type.ToString()
-        };
+        type == ActivityType.Other ? "Other activity" : type.ToString();
 
     private static string GetIcon(ActivityType type) => type switch
     {

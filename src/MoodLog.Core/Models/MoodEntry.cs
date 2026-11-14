@@ -30,11 +30,17 @@ public record MoodEntry(
         }
 
         var tagList = (tags ?? Enumerable.Empty<string>())
-            .Select(t => t.Trim())
-            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Select(tag => tag?.Trim() ?? string.Empty)
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(10)
             .ToList();
+
+        if (tagList.Any(tag => tag.Length > 40))
+        {
+            return Result<MoodEntry, DomainError>.Fail(
+                DomainError.Validation("Each tag must be 40 characters or fewer."));
+        }
 
         var entry = new MoodEntry(
             Guid.NewGuid(),

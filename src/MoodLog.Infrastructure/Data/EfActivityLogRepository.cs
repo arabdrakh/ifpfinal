@@ -7,6 +7,33 @@ namespace MoodLog.Infrastructure.Data;
 public sealed class EfActivityLogRepository(
     IDbContextFactory<MoodLogDbContext> contextFactory) : IActivityLogRepository
 {
+    public async Task<ActivityLog?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await db.ActivityLogs.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+    }
+
+    public async Task<bool> UpdateAsync(ActivityLog log, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var existing = await db.ActivityLogs.FindAsync([log.Id], cancellationToken);
+        if (existing is null) return false;
+        db.Entry(existing).CurrentValues.SetValues(log);
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var existing = await db.ActivityLogs.FindAsync([id], cancellationToken);
+        if (existing is null) return false;
+        db.ActivityLogs.Remove(existing);
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task AddAsync(ActivityLog log, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(cancellationToken);

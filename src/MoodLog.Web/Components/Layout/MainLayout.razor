@@ -1,6 +1,6 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
-<div class="page">
+<div class="page" data-interactive="@_interactiveReady.ToString().ToLowerInvariant()">
     <div class="sidebar">
         <NavMenu />
     </div>
@@ -15,3 +15,16 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    // OnAfterRender is not called during static prerendering. Browser tests can
+    // wait for this marker rather than submit forms before the circuit connects.
+    private bool _interactiveReady;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        _interactiveReady = true;
+        StateHasChanged();
+    }
+}

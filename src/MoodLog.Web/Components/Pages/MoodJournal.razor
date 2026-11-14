@@ -1,7 +1,9 @@
-﻿@page "/mood"
+@page "/mood"
 @using MoodLog.Core.Models
 @using MoodLog.Core.Services
 @inject MoodJournalService Journal
+@inject IJSRuntime JS
+@inject ILogger<MoodJournal> Logger
 
 <PageTitle>Mood journal | MoodLog</PageTitle>
 
@@ -20,7 +22,7 @@
             <h2>How are you feeling?</h2>
             <p class="mood-muted">Take a moment to check in with yourself.</p>
 
-            <EditForm Model="_form" OnValidSubmit="SaveAsync" FormName="mood-journal">
+            <EditForm @key="_form" Model="_form" OnValidSubmit="SaveAsync" FormName="mood-journal">
                 <DataAnnotationsValidator />
                 <label class="form-label" for="entry-date">Date</label>
                 <InputDate id="entry-date" class="form-control mood-control" @bind-Value="_form.Date" />
@@ -38,6 +40,7 @@
                 <label class="form-label mt-3" for="entry-tags">Tags <span class="mood-muted">(optional)</span></label>
                 <InputText id="entry-tags" class="form-control mood-control" @bind-Value="_form.Tags"
                            placeholder="work, friends, rest" />
+                <div class="mood-help">Up to 10 tags; each may contain up to 40 characters.</div>
 
                 <label class="form-label mt-3" for="entry-note">Note <span class="mood-muted">(optional)</span></label>
                 <InputTextArea id="entry-note" class="form-control mood-control" @bind-Value="_form.Note"
@@ -45,12 +48,18 @@
                 <ValidationMessage For="@(() => _form.Note)" />
                 <div class="mood-help">Up to 500 characters</div>
 
-                <button class="btn mood-submit mt-4" type="submit">Save check-in</button>
+                <div class="form-actions mt-4">
+                    <button class="btn mood-submit" type="submit" disabled="@_saving">@(_editingId is null ? "Save check-in" : "Save changes")</button>
+                    @if (_editingId is not null)
+                    {
+                        <button class="btn btn-outline-secondary" type="button" @onclick="CancelEdit" disabled="@_saving">Cancel</button>
+                    }
+                </div>
             </EditForm>
 
             @if (!string.IsNullOrWhiteSpace(_message))
             {
-                <p class="mood-feedback" role="status">@_message</p>
+                <p class="@(_isError ? "tracker-error" : "mood-feedback")" role="status">@_message</p>
             }
         </section>
 
@@ -95,6 +104,9 @@
                                         }
                                     </div>
                                 }
+                                <EntryActions Label="mood entry" Busy="_saving"
+                                              OnEdit="() => EditEntry(entry)"
+                                              OnDelete="() => DeleteAsync(entry.Id)" />
                             </div>
                         </article>
                     }
@@ -107,27 +119,98 @@
 @code {
     private MoodEntryForm _form = new();
     private IReadOnlyList<MoodEntry> _entries = [];
+    private Guid? _editingId;
     private string? _message;
+    private bool _isError;
+    private bool _saving;
 
     protected override async Task OnInitializedAsync()
     {
         _form.Date = DateOnly.FromDateTime(DateTime.Today);
-        _entries = await Journal.GetRecentAsync(30);
+        await LoadEntriesAsync();
+    }
+
+    private async Task LoadEntriesAsync()
+    {
+        try { _entries = await Journal.GetRecentAsync(30); }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to load mood history");
+            _isError = true;
+            _message = "Could not load your check-ins. Please refresh the page.";
+        }
+    }
+
+    private void EditEntry(MoodEntry entry)
+    {
+        _editingId = entry.Id;
+        _form = new MoodEntryForm
+        {
+            Date = entry.Date, Level = entry.Level,
+            Tags = string.Join(", ", entry.Tags), Note = entry.Note
+        };
+        _message = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _form = new MoodEntryForm { Date = DateOnly.FromDateTime(DateTime.Today) };
+        _message = null;
     }
 
     private async Task SaveAsync()
     {
-        var tags = _form.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var result = await Journal.AddAsync(_form.Date, _form.Level, tags, _form.Note);
-        if (result.IsFailure)
+        if (_saving) return;
+        _saving = true;
+        try
         {
-            _message = result.Error.Message;
-            return;
-        }
+            var tags = _form.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var result = _editingId is Guid id
+                ? await Journal.UpdateAsync(id, _form.Date, _form.Level, tags, _form.Note)
+                : await Journal.AddAsync(_form.Date, _form.Level, tags, _form.Note);
+            _isError = result.IsFailure;
+            if (_isError) { _message = result.Error.Message; return; }
 
-        _entries = await Journal.GetRecentAsync(30);
-        _form = new MoodEntryForm { Date = DateOnly.FromDateTime(DateTime.Today) };
-        _message = "Your check-in has been saved.";
+            var edited = _editingId is not null;
+            CancelEdit();
+            await LoadEntriesAsync();
+            if (!_isError) _message = edited ? "Your check-in has been updated." : "Your check-in has been saved.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to save mood entry");
+            _isError = true;
+            _message = "Could not save your check-in. Please try again.";
+        }
+        finally { _saving = false; }
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        if (_saving) return;
+        try
+        {
+            // JS interop can fail if the browser disconnects; keep it inside try/catch.
+            if (!await JS.InvokeAsync<bool>("confirm", "Delete this check-in? This cannot be undone.")) return;
+            _saving = true;
+            var result = await Journal.DeleteAsync(id);
+            _isError = result.IsFailure;
+            _message = _isError ? result.Error.Message : "Check-in deleted.";
+            if (!_isError)
+            {
+                if (_editingId == id) CancelEdit();
+                await LoadEntriesAsync();
+                if (!_isError) _message = "Check-in deleted.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to delete mood entry");
+            _isError = true;
+            _message = "Could not delete the check-in. Please try again.";
+        }
+        finally { _saving = false; }
     }
 
     private sealed class MoodEntryForm

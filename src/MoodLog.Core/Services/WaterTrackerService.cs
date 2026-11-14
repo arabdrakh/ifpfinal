@@ -4,7 +4,7 @@ using MoodLog.Core.Models;
 
 namespace MoodLog.Core.Services;
 
-public sealed class WaterTrackerService(IWaterLogRepository repository)
+public sealed class WaterTrackerService(IWaterLogRepository repository, WellnessState? state = null)
 {
     public async Task<Result<WaterLog, DomainError>> AddAsync(
         DateOnly date,
@@ -16,8 +16,38 @@ public sealed class WaterTrackerService(IWaterLogRepository repository)
             .BindAsync(async log =>
             {
                 await repository.AddAsync(log, cancellationToken);
+                state?.NotifyChanged();
                 return Result<WaterLog, DomainError>.Ok(log);
             });
+    }
+
+    public async Task<Result<WaterLog, DomainError>> UpdateAsync(
+        Guid id, DateOnly date, int amountMl, int dailyGoalMl = 2000, CancellationToken cancellationToken = default)
+    {
+        var existing = await repository.GetByIdAsync(id, cancellationToken);
+        if (existing is null)
+            return Result<WaterLog, DomainError>.Fail(DomainError.NotFound("Entry not found."));
+
+        var validated = WaterLog.Create(date, amountMl, dailyGoalMl);
+        if (validated.IsFailure)
+            return validated;
+
+        var updated = validated.Value with { Id = existing.Id, LoggedAt = existing.LoggedAt };
+        if (!await repository.UpdateAsync(updated, cancellationToken))
+            return Result<WaterLog, DomainError>.Fail(DomainError.NotFound("Entry not found."));
+
+        state?.NotifyChanged();
+        return Result<WaterLog, DomainError>.Ok(updated);
+    }
+
+    public async Task<Result<Unit, DomainError>> DeleteAsync(
+        Guid id, CancellationToken cancellationToken = default)
+    {
+        if (!await repository.DeleteAsync(id, cancellationToken))
+            return Result<Unit, DomainError>.Fail(DomainError.NotFound("Entry not found."));
+
+        state?.NotifyChanged();
+        return Result<Unit, DomainError>.Ok(Unit.Value);
     }
 
     public async Task<WaterProgress> GetDailyProgressAsync(
@@ -32,10 +62,7 @@ public sealed class WaterTrackerService(IWaterLogRepository repository)
 
         var logs = await repository.GetForDateAsync(date, cancellationToken);
         var consumedMl = logs.Sum(log => (long)log.AmountMl);
-        var dailyGoalMl = logs
-            .OrderByDescending(log => log.LoggedAt)
-            .Select(log => (int?)log.DailyGoalMl)
-            .FirstOrDefault() ?? defaultGoalMl;
+        var dailyGoalMl = defaultGoalMl;
         var remainingMl = Math.Max(0, dailyGoalMl - consumedMl);
         var progressPercent = (int)Math.Min(100, consumedMl * 100d / dailyGoalMl);
 

@@ -4,6 +4,12 @@ namespace MoodLog.Core.Interfaces;
 
 public interface IMoodEntryRepository
 {
+    Task<MoodEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<bool> UpdateAsync(MoodEntry entry, CancellationToken cancellationToken = default);
+
+    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task AddAsync(MoodEntry entry, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<MoodEntry>> GetRecentAsync(

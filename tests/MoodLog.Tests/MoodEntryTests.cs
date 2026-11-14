@@ -45,6 +45,19 @@ public class MoodEntryTests
     }
 
     [Fact]
+    public void Create_ShouldRejectOverlyLongTag()
+    {
+        var result = MoodEntry.Create(
+            new DateOnly(2026, 11, 13),
+            MoodLevel.Good,
+            [new string('a', 41)],
+            null);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("VALIDATION_ERROR", result.Error.Code);
+    }
+
+    [Fact]
     public void Create_ShouldLimitTagsToTen()
     {
         var tags = Enumerable.Range(1, 12).Select(number => $"tag-{number}");

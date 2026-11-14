@@ -1,0 +1,13 @@
+<div class="entry-actions">
+    <button type="button" class="log-action" disabled="@Busy"
+            @onclick="() => OnEdit.InvokeAsync()" aria-label="Edit @Label">Edit</button>
+    <button type="button" class="log-action log-action-danger" disabled="@Busy"
+            @onclick="() => OnDelete.InvokeAsync()" aria-label="Delete @Label">Delete</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "entry";
+    [Parameter] public bool Busy { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnEdit { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnDelete { get; set; }
+}

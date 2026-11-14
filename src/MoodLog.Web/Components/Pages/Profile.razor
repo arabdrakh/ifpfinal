@@ -1,7 +1,8 @@
-﻿@page "/profile"
+@page "/profile"
 @using MoodLog.Core.Models
 @using MoodLog.Core.Services
 @inject ProfileSettingsService ProfileService
+@inject ILogger<Profile> Logger
 
 <PageTitle>Profile | MoodLog</PageTitle>
 
@@ -56,7 +57,7 @@
             </div>
 
             <p class="tracker-hint">Goals are personal tracking preferences, not medical recommendations.</p>
-            <button class="btn tracker-submit mt-3" type="submit">Save settings</button>
+            <button class="btn tracker-submit mt-3" type="submit" disabled="@_saving">@(_saving ? "Saving…" : "Save settings")</button>
         </EditForm>
 
         @if (!string.IsNullOrWhiteSpace(_message))
@@ -70,32 +71,54 @@
     private ProfileForm _form = new();
     private string? _message;
     private bool _isError;
+    private bool _saving;
 
     protected override async Task OnInitializedAsync()
     {
-        var settings = await ProfileService.GetAsync();
-        _form = new ProfileForm
+        try
         {
-            DisplayName = settings.DisplayName,
-            DailyWaterGoalMl = settings.DailyWaterGoalMl,
-            DailySleepGoalHours = settings.DailySleepGoalMinutes / 60d,
-            DailyStepGoal = settings.DailyStepGoal
-        };
+            var settings = await ProfileService.GetAsync();
+            _form = new ProfileForm
+            {
+                DisplayName = settings.DisplayName,
+                DailyWaterGoalMl = settings.DailyWaterGoalMl,
+                DailySleepGoalHours = settings.DailySleepGoalMinutes / 60d,
+                DailyStepGoal = settings.DailyStepGoal
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not load profile settings");
+            _isError = true;
+            _message = "Could not load settings. Please refresh the page.";
+        }
     }
 
     private async Task SaveAsync()
     {
-        var sleepMinutes = (int)Math.Round(_form.DailySleepGoalHours * 60);
-        var result = await ProfileService.SaveAsync(
-            _form.DisplayName,
-            _form.DailyWaterGoalMl,
-            sleepMinutes,
-            _form.DailyStepGoal);
+        if (_saving) return;
+        _saving = true;
+        try
+        {
+            var sleepMinutes = (int)Math.Round(_form.DailySleepGoalHours * 60);
+            var result = await ProfileService.SaveAsync(
+                _form.DisplayName,
+                _form.DailyWaterGoalMl,
+                sleepMinutes,
+                _form.DailyStepGoal);
 
-        _isError = result.IsFailure;
-        _message = result.IsFailure
-            ? result.Error.Message
-            : "Your profile and goals have been saved.";
+            _isError = result.IsFailure;
+            _message = result.IsFailure
+                ? result.Error.Message
+                : "Your profile and goals have been saved.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not save profile settings");
+            _isError = true;
+            _message = "Could not save settings. Please try again.";
+        }
+        finally { _saving = false; }
     }
 
     private sealed class ProfileForm

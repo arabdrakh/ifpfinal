@@ -1,7 +1,9 @@
-﻿@page "/sleep"
+@page "/sleep"
 @using MoodLog.Core.Models
 @using MoodLog.Core.Services
 @inject SleepTrackerService SleepTracker
+@inject IJSRuntime JS
+@inject ILogger<Sleep> Logger
 
 <PageTitle>Sleep tracker | MoodLog</PageTitle>
 
@@ -15,7 +17,7 @@
         <label class="tracker-date-label" for="sleep-date">
             <span>Sleep date</span>
             <InputDate id="sleep-date" class="form-control tracker-control"
-                       @bind-Value="_date" @bind-Value:after="LoadEntriesAsync" />
+                       @bind-Value="_date" @bind-Value:after="ChangeDateAsync" />
         </label>
     </header>
 
@@ -24,7 +26,7 @@
             <h2 id="sleep-form-title">Log a night's sleep</h2>
             <p class="tracker-muted">Enter the time you went to bed and woke up.</p>
 
-            <EditForm Model="_form" OnValidSubmit="SaveAsync" FormName="sleep-tracker">
+            <EditForm @key="_form" Model="_form" OnValidSubmit="SaveAsync" FormName="sleep-tracker">
                 <DataAnnotationsValidator />
                 <label class="form-label" for="sleep-bedtime">Bedtime</label>
                 <InputDate id="sleep-bedtime" Type="InputDateType.Time"
@@ -37,12 +39,18 @@
                 <ValidationMessage For="@(() => _form.WakeTime)" />
 
                 <p class="tracker-hint">Overnight sleep is calculated automatically. Entries over 16 hours are not accepted.</p>
-                <button class="btn tracker-submit mt-3" type="submit">Save sleep</button>
+                <div class="form-actions mt-3">
+                    <button class="btn tracker-submit" type="submit" disabled="@_saving">@(_editingId is null ? "Save sleep" : "Save changes")</button>
+                    @if (_editingId is not null)
+                    {
+                        <button class="btn btn-outline-secondary" type="button" @onclick="CancelEdit" disabled="@_saving">Cancel</button>
+                    }
+                </div>
             </EditForm>
 
             @if (!string.IsNullOrWhiteSpace(_message))
             {
-                <p class="tracker-feedback" role="status">@_message</p>
+                <p class="@(_isError ? "tracker-error" : "tracker-feedback")" role="status">@_message</p>
             }
         </section>
 
@@ -71,6 +79,9 @@
                                 <span>@entry.Bedtime.ToString("h:mm tt") – @entry.WakeTime.ToString("h:mm tt")</span>
                             </div>
                             <time datetime="@entry.LoggedAt.ToString("O")">@entry.LoggedAt.ToLocalTime().ToString("h:mm tt")</time>
+                            <EntryActions Label="sleep entry" Busy="_saving"
+                                              OnEdit="() => EditEntry(entry)"
+                                              OnDelete="() => DeleteAsync(entry.Id)" />
                         </li>
                     }
                 </ul>
@@ -83,26 +94,100 @@
     private DateOnly _date = DateOnly.FromDateTime(DateTime.Today);
     private IReadOnlyList<SleepLog> _entries = [];
     private SleepForm _form = new();
+    private Guid? _editingId;
     private string? _message;
+    private bool _isError;
+    private bool _saving;
 
     protected override Task OnInitializedAsync() => LoadEntriesAsync();
 
+    private void EditEntry(SleepLog entry)
+    {
+        _date = entry.Date;
+        _editingId = entry.Id;
+        _form = new SleepForm { Bedtime = entry.Bedtime, WakeTime = entry.WakeTime };
+        _message = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _form = new SleepForm();
+        _message = null;
+    }
+
+    private async Task ChangeDateAsync()
+    {
+        CancelEdit();
+        await LoadEntriesAsync();
+    }
+
     private async Task SaveAsync()
     {
-        var result = await SleepTracker.AddAsync(_date, _form.Bedtime, _form.WakeTime);
-        if (result.IsFailure)
+        if (_saving) return;
+        _saving = true;
+        try
         {
-            _message = result.Error.Message;
-            return;
-        }
+            var result = _editingId is Guid id
+                ? await SleepTracker.UpdateAsync(id, _date, _form.Bedtime, _form.WakeTime)
+                : await SleepTracker.AddAsync(_date, _form.Bedtime, _form.WakeTime);
+            _isError = result.IsFailure;
+            if (_isError) { _message = result.Error.Message; return; }
 
-        _message = $"Sleep logged: {FormatDuration(result.Value.DurationMinutes)}.";
-        await LoadEntriesAsync();
+            var edited = _editingId is not null;
+            CancelEdit();
+            await LoadEntriesAsync();
+            if (!_isError) _message = edited ? "Sleep entry updated." : $"Sleep logged: {FormatDuration(result.Value.DurationMinutes)}.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to save sleep entry");
+            _isError = true;
+            _message = "Could not save sleep. Please try again.";
+        }
+        finally { _saving = false; }
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        if (_saving) return;
+        try
+        {
+            // JS interop can fail if the browser disconnects; keep it inside try/catch.
+            if (!await JS.InvokeAsync<bool>("confirm", "Delete this sleep entry? This cannot be undone.")) return;
+            _saving = true;
+            var result = await SleepTracker.DeleteAsync(id);
+            _isError = result.IsFailure;
+            _message = _isError ? result.Error.Message : "Sleep entry deleted.";
+            if (!_isError)
+            {
+                if (_editingId == id) CancelEdit();
+                await LoadEntriesAsync();
+                if (!_isError) _message = "Sleep entry deleted.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to delete sleep entry");
+            _isError = true;
+            _message = "Could not delete sleep. Please try again.";
+        }
+        finally { _saving = false; }
     }
 
     private async Task LoadEntriesAsync()
     {
-        _entries = await SleepTracker.GetForDateAsync(_date);
+        try
+        {
+            _entries = await SleepTracker.GetForDateAsync(_date);
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to load sleep history");
+            _isError = true;
+            _message = "Could not load sleep history. Please refresh the page.";
+        }
     }
 
     private static string FormatDuration(int minutes) =>

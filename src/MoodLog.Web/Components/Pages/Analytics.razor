@@ -1,4 +1,4 @@
-﻿@page "/analytics"
+@page "/analytics"
 @using System.Globalization
 @using System.Text
 @using Microsoft.JSInterop
@@ -6,6 +6,9 @@
 @using MoodLog.Core.Services
 @inject WellnessAnalyticsService AnalyticsService
 @inject IJSRuntime JS
+@inject WellnessState WellnessState
+@inject ILogger<Analytics> Logger
+@implements IDisposable
 
 <PageTitle>Analytics | MoodLog</PageTitle>
 
@@ -25,6 +28,11 @@
             </InputSelect>
         </div>
     </header>
+
+    @if (_report is null && !string.IsNullOrWhiteSpace(_message))
+    {
+        <p class="tracker-error" role="alert">@_message</p>
+    }
 
     @if (_report is not null)
     {
@@ -97,7 +105,7 @@
                     <span aria-hidden="true">↗</span>
                 </div>
                 <p class="analytics-subtitle">Download your daily summaries as a CSV file you can open in a spreadsheet.</p>
-                <button class="btn analytics-export" @onclick="ExportCsvAsync">Download CSV</button>
+                <button class="btn analytics-export" @onclick="ExportCsvAsync" disabled="@_exporting">@(_exporting ? "Preparing…" : "Download CSV")</button>
                 @if (!string.IsNullOrWhiteSpace(_message))
                 {
                     <p class="analytics-feedback" role="status">@_message</p>
@@ -111,6 +119,7 @@
     private int _days = 7;
     private WellnessReport? _report;
     private string? _message;
+    private bool _exporting;
     private IReadOnlyList<string> ChartLabels =>
         _report!.Days.Select(day => day.Date.ToString(_days == 7 ? "ddd" : "MMM d", CultureInfo.InvariantCulture)).ToArray();
     private IReadOnlyList<double?> MoodValues =>
@@ -122,37 +131,67 @@
     private IReadOnlyList<double?> ActivityValues =>
         _report!.Days.Select(day => day.HasActivity ? (double?)day.ActivityMinutes : null).ToArray();
 
-    protected override Task OnInitializedAsync() => LoadReportAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        WellnessState.Changed += OnDataChanged;
+        await LoadReportAsync();
+    }
+
+    private void OnDataChanged() => _ = InvokeAsync(async () =>
+    {
+        await LoadReportAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => WellnessState.Changed -= OnDataChanged;
 
     private async Task LoadReportAsync()
     {
-        _report = await AnalyticsService.GetReportAsync(DateOnly.FromDateTime(DateTime.Today), _days);
+        try
+        {
+            _report = await AnalyticsService.GetReportAsync(DateOnly.FromDateTime(DateTime.Today), _days);
+            _message = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not load analytics");
+            _report = null;
+            _message = "Could not load the report. Please try again.";
+        }
     }
 
     private async Task ExportCsvAsync()
     {
-        if (_report is null)
-        {
+        if (_report is null || _exporting)
             return;
-        }
 
-        var csv = new StringBuilder("Date,Mood (1-5),Water (ml),Water goal (ml),Sleep (minutes),Activity (minutes),Steps\r\n");
-        foreach (var day in _report.Days)
+        _exporting = true;
+        try
         {
-            csv.Append(day.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append(',')
-                .Append(day.AverageMood?.ToString("F1", CultureInfo.InvariantCulture) ?? string.Empty).Append(',')
-                .Append(day.WaterConsumedMl).Append(',')
-                .Append(day.WaterGoalMl).Append(',')
-                .Append(day.SleepMinutes?.ToString(CultureInfo.InvariantCulture) ?? string.Empty).Append(',')
-                .Append(day.ActivityMinutes).Append(',')
-                .Append(day.Steps).Append("\r\n");
-        }
+            var csv = new StringBuilder("Date,Mood (1-5),Water (ml),Water goal (ml),Sleep (minutes),Activity (minutes),Steps\r\n");
+            foreach (var day in _report.Days)
+            {
+                csv.Append(day.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append(',')
+                    .Append(day.AverageMood?.ToString("F1", CultureInfo.InvariantCulture) ?? string.Empty).Append(',')
+                    .Append(day.WaterConsumedMl).Append(',')
+                    .Append(day.WaterGoalMl).Append(',')
+                    .Append(day.SleepMinutes?.ToString(CultureInfo.InvariantCulture) ?? string.Empty).Append(',')
+                    .Append(day.ActivityMinutes).Append(',')
+                    .Append(day.Steps).Append("\r\n");
+            }
 
-        await JS.InvokeVoidAsync(
-            "moodLog.downloadCsv",
-            $"moodlog-{_days}-days-{DateTime.Today:yyyy-MM-dd}.csv",
-            csv.ToString());
-        _message = "Your report is ready to download.";
+            await JS.InvokeVoidAsync(
+                "moodLog.downloadCsv",
+                $"moodlog-{_days}-days-{DateTime.Today:yyyy-MM-dd}.csv",
+                csv.ToString());
+            _message = "Your report is ready to download.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not export CSV");
+            _message = "Download failed. Please try again.";
+        }
+        finally { _exporting = false; }
     }
 
     private static string FormatDuration(int? minutes) =>

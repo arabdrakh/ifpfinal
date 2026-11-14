@@ -67,6 +67,20 @@ public class SleepAndActivityTests
 
     private sealed class TestSleepLogRepository : ISleepLogRepository
     {
+        public Task<SleepLog?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Logs.FirstOrDefault(item => item.Id == id));
+
+        public Task<bool> UpdateAsync(SleepLog item, CancellationToken cancellationToken = default)
+        {
+            var index = Logs.FindIndex(old => old.Id == item.Id);
+            if (index == -1) return Task.FromResult(false);
+            Logs[index] = item;
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Logs.RemoveAll(item => item.Id == id) > 0);
+
         public List<SleepLog> Logs { get; } = [];
 
         public Task AddAsync(SleepLog log, CancellationToken cancellationToken = default)
@@ -90,6 +104,20 @@ public class SleepAndActivityTests
 
     private sealed class TestActivityLogRepository : IActivityLogRepository
     {
+        public Task<ActivityLog?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Logs.FirstOrDefault(item => item.Id == id));
+
+        public Task<bool> UpdateAsync(ActivityLog item, CancellationToken cancellationToken = default)
+        {
+            var index = Logs.FindIndex(old => old.Id == item.Id);
+            if (index == -1) return Task.FromResult(false);
+            Logs[index] = item;
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Logs.RemoveAll(item => item.Id == id) > 0);
+
         public List<ActivityLog> Logs { get; } = [];
 
         public Task AddAsync(ActivityLog log, CancellationToken cancellationToken = default)

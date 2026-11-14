@@ -1,8 +1,11 @@
-﻿@page "/"
+@page "/"
 @using MoodLog.Core.Models
 @using MoodLog.Core.Services
 @inject WellnessAnalyticsService Analytics
 @inject ProfileSettingsService ProfileService
+@inject WellnessState WellnessState
+@inject ILogger<Home> Logger
+@implements IDisposable
 
 <PageTitle>Dashboard | MoodLog</PageTitle>
 
@@ -15,6 +18,11 @@
         </div>
         <span class="dashboard-date">@DateTime.Today.ToString("dddd, MMMM d", CultureInfo.InvariantCulture)</span>
     </header>
+
+    @if (!string.IsNullOrEmpty(_loadError))
+    {
+        <p class="tracker-error" role="alert">@_loadError</p>
+    }
 
     <section class="dashboard-metrics" aria-label="Today's wellness summary">
         <a class="dashboard-metric metric-mood" href="mood">
@@ -79,11 +87,11 @@
 
 @code {
     private WellnessReport? _report;
+    private string? _loadError;
     private ProfileSettings _profile = ProfileSettings.Default;
     private string _displayName => _profile.DisplayName;
     private WellnessDay? Today => _report?.Days.SingleOrDefault();
-    private int DailyWaterGoal =>
-        Today is { WaterConsumedMl: > 0 } day ? day.WaterGoalMl : _profile.DailyWaterGoalMl;
+    private int DailyWaterGoal => _profile.DailyWaterGoalMl;
     private string Greeting => DateTime.Now.Hour switch
     {
         < 12 => "morning",
@@ -93,9 +101,33 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _profile = await ProfileService.GetAsync();
-        _report = await Analytics.GetReportAsync(DateOnly.FromDateTime(DateTime.Today), 1);
+        WellnessState.Changed += OnDataChanged;
+        await LoadAsync();
     }
+
+    private void OnDataChanged() => _ = InvokeAsync(async () =>
+    {
+        await LoadAsync();
+        StateHasChanged();
+    });
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _profile = await ProfileService.GetAsync();
+            _report = await Analytics.GetReportAsync(DateOnly.FromDateTime(DateTime.Today), 1);
+            _loadError = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not load dashboard");
+            _report = null;
+            _loadError = "Could not load your dashboard. Please refresh the page.";
+        }
+    }
+
+    public void Dispose() => WellnessState.Changed -= OnDataChanged;
 
     private static string FormatDuration(int? minutes) =>
         minutes is null ? "Not logged" : $"{minutes.Value / 60}h {minutes.Value % 60:D2}m";

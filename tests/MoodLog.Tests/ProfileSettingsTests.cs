@@ -35,6 +35,14 @@ public class ProfileSettingsTests
     }
 
     [Fact]
+    public async Task GetAsync_ShouldUseDefaultSettingsWhenNoProfileExists()
+    {
+        var service = new ProfileSettingsService(new TestProfileRepository());
+        var settings = await service.GetAsync();
+        Assert.Equal(ProfileSettings.Default, settings);
+    }
+
+    [Fact]
     public async Task SaveAsync_ShouldPersistValidSettingsAndKeepInvalidSettingsOut()
     {
         var repository = new TestProfileRepository();

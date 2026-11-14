@@ -7,28 +7,21 @@ The project is designed for local, single-user use. It is not a medical product 
 ## Features
 
 - **Dashboard** — a daily summary of your mood, water intake, sleep, and activity.
-- **Mood journal** — record a mood, add optional tags, and write a short note.
-- **Water tracker** — log drinks, set a daily goal, and see your progress.
-- **Sleep tracker** — record bedtime and wake-up time. MoodLog calculates the duration, including sleep across midnight.
-- **Activity tracker** — record the activity type, duration, and optional step count.
+- **Mood journal** — record, edit, or delete a mood; add optional tags and a short note.
+- **Water tracker** — log, edit, and delete drinks; use the daily goal configured in Profile and see current progress.
+- **Sleep tracker** — record, edit, and delete sleep sessions. MoodLog calculates the duration, including sleep across midnight.
+- **Activity tracker** — record, edit, and delete the activity type, duration, and optional step count.
 - **Analytics** — view daily charts and summaries for the last 7 or 30 days.
 - **Smart Insights** — see simple observations based on the information you have logged.
 - **CSV export** — download daily summaries for the selected period.
-- **Profile and goals** — set your display name and personal water, sleep, and step goals.
+- **Profile and goals** — set your display name and personal water, sleep, and step goals; profile water goal consistently controls all summaries.
 
 All records are stored in a local SQLite database. The application creates or updates the database automatically when it starts.
 
 
 ## How to run
 
-1. Clone the repository and open a terminal in the project folder:
-
-   ```bash
-   git clone https://github.com/arabdrakh/ifpfinal.git
-   cd ifpfinal
-   ```
-
-   If you already have the project on your computer, open a terminal in its root folder.
+1. Extract the supplied ZIP archive and open a terminal in the extracted `ifpfinal-main` folder (the folder containing `MoodLog.slnx`). **Use the ZIP supplied with this submission:** cloning the older remote repository may not contain these improvements. If your team has already pushed this revision to GitHub, cloning that updated revision is also fine.
 
 2. Restore the NuGet packages:
 
@@ -46,17 +39,19 @@ All records are stored in a local SQLite database. The application creates or up
 
 Keep the terminal open while using the application. Press `Ctrl+C` in the terminal to stop it.
 
-On the first start, MoodLog creates the SQLite database and applies its migrations. The default database file is `src/MoodLog.Web/moodlog.db` when you run the command above. Keep this file if you want to keep your local records.
+On the first start, MoodLog creates the SQLite database and applies its migrations. The database file is created relative to the web application's working directory unless a full database path is configured. Keep the `.db` file if you want to preserve your local records, and back it up before replacing the application.
 
 ## Run the tests
 
-Automated tests help catch bugs when features change. They check validation rules, tracking services, analytics, and SQLite persistence and migrations. GitHub Actions runs the solution tests on Windows, Linux, and macOS. Browser end-to-end tests use Playwright to verify saving a mood check-in, persisting it after reload, and applying profile settings to the dashboard.
+Automated tests help catch bugs when features change. They check validation rules, tracking services, analytics, and SQLite persistence and migrations. GitHub Actions runs the solution tests on Windows, Linux, and macOS. Browser end-to-end tests use Playwright to exercise mood persistence, profile settings, water CRUD and goal consistency, sleep/activity entry creation, analytics period selection, and CSV export. The current revision was verified on Windows with .NET SDK 10.0.403: Release build passed, all 55 unit/integration tests passed, and all 5 browser tests passed. This does not replace the cross-platform CI matrix or manual device checks.
 
 From the project root, run:
 
 ```bash
-dotnet test tests/MoodLog.Tests/MoodLog.Tests.csproj
+dotnet test tests/MoodLog.Tests/MoodLog.Tests.csproj --collect:"XPlat Code Coverage"
 ```
+
+On Windows, you can run `powershell.exe -ExecutionPolicy Bypass -File .\scripts\VERIFY_WINDOWS.ps1` from the extracted project root to execute restore, Release build, unit/integration tests, browser installation and E2E tests in order. It stops on any failed step. Verify the reported results rather than assuming success.
 
 To run the browser end-to-end tests, build the test project and install Playwright's Chromium browser once. On Windows, use PowerShell:
 
@@ -74,7 +69,7 @@ pwsh tests/MoodLog.E2E/bin/Debug/net10.0/playwright.ps1 install chromium
 dotnet test tests/MoodLog.E2E/MoodLog.E2E.csproj --no-build
 ```
 
-The browser tests start the web app with a temporary SQLite database and remove that database when the test run finishes.
+The browser tests start the web app with a temporary SQLite database and remove that database when the test run finishes. They wait for Blazor interactivity and verify the downloaded CSV file contents. They require a working browser and web server.
 
 ## Check the app on a phone
 
@@ -96,6 +91,7 @@ src/
   MoodLog.Web/             Blazor pages, components, and web application
 tests/
   MoodLog.Tests/           xUnit unit and persistence tests
+  MoodLog.E2E/             Playwright browser tests
 MoodLog.slnx               .NET solution
 ```
 
@@ -104,6 +100,18 @@ The application separates core wellness logic from database access and the web i
 - **Core** defines the wellness models, validation rules, repository interfaces, and services.
 - **Infrastructure** implements the repositories with Entity Framework Core and SQLite.
 - **Web** provides the interactive Blazor interface and connects the services to the pages.
+
+## Presentation and detailed documentation
+
+- [`presentation/MoodLog_Final_Presentation.pptx`](presentation/MoodLog_Final_Presentation.pptx) — editable slides including goals, relevance, technology comparison, architecture, methodology, interface, FP, testing and conclusions.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Mermaid architecture and flow diagrams, alternatives, architectural trade-offs, data and state management.
+- [`docs/DEFENSE.md`](docs/DEFENSE.md) — suggested live-demo sequence and likely defense questions.
+- [`docs/QA_CHECKLIST.md`](docs/QA_CHECKLIST.md) — manual release acceptance checklist; tests must be executed and results recorded.
+- [`docs/RELEASE_NOTES.md`](docs/RELEASE_NOTES.md) — changes, backward compatibility and limitations.
+- [`docs/RUBRIC_MAPPING.md`](docs/RUBRIC_MAPPING.md) — cross-reference to all 20 grading criteria.
+- [`docs/RECHECK_REPORT.md`](docs/RECHECK_REPORT.md) — independent second audit, corrections, remaining risks, and verification status.
+
+**Verification note:** The supplied revision passed a Windows .NET 10 Release build and automated unit/integration/browser tests. Manual cross-platform checks are still outstanding. The screenshots below show the previous visual baseline, not the new editing controls; retake them after reviewing the updated interface.
 
 ## Data and privacy
 

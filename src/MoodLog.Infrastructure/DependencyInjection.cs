@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<ISleepLogRepository, EfSleepLogRepository>();
         services.AddScoped<IActivityLogRepository, EfActivityLogRepository>();
         services.AddScoped<IProfileSettingsRepository, EfProfileSettingsRepository>();
+        services.AddScoped<WellnessState>();
         services.AddScoped<MoodJournalService>();
         services.AddScoped<WaterTrackerService>();
         services.AddScoped<SleepTrackerService>();

@@ -49,6 +49,20 @@ public class MoodJournalServiceTests
 
     private sealed class TestMoodEntryRepository : IMoodEntryRepository
     {
+        public Task<MoodEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Entries.FirstOrDefault(item => item.Id == id));
+
+        public Task<bool> UpdateAsync(MoodEntry item, CancellationToken cancellationToken = default)
+        {
+            var index = Entries.FindIndex(old => old.Id == item.Id);
+            if (index == -1) return Task.FromResult(false);
+            Entries[index] = item;
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Entries.RemoveAll(item => item.Id == id) > 0);
+
         public List<MoodEntry> Entries { get; } = [];
 
         public Task AddAsync(MoodEntry entry, CancellationToken cancellationToken = default)

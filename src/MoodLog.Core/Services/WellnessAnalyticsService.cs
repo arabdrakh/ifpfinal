@@ -7,7 +7,8 @@ public sealed class WellnessAnalyticsService(
     IMoodEntryRepository moodRepository,
     IWaterLogRepository waterRepository,
     ISleepLogRepository sleepRepository,
-    IActivityLogRepository activityRepository)
+    IActivityLogRepository activityRepository,
+    IProfileSettingsRepository? profileRepository = null)
 {
     private sealed record WaterDay(long Consumed, int Goal);
     private sealed record ActivityDay(int Minutes, long Steps);
@@ -23,6 +24,10 @@ public sealed class WellnessAnalyticsService(
         var startDate = endDate.AddDays(-(days - 1));
         var insightsStartDate = endDate.AddDays(-13);
         var dataStartDate = startDate < insightsStartDate ? startDate : insightsStartDate;
+        var profile = profileRepository is null
+            ? null
+            : await profileRepository.GetAsync(cancellationToken);
+        var currentWaterGoalMl = profile?.DailyWaterGoalMl ?? ProfileSettings.Default.DailyWaterGoalMl;
         var moods = await moodRepository.GetForRangeAsync(dataStartDate, endDate, cancellationToken);
         var waterLogs = await waterRepository.GetForRangeAsync(dataStartDate, endDate, cancellationToken);
         var sleepLogs = await sleepRepository.GetForRangeAsync(dataStartDate, endDate, cancellationToken);
@@ -33,7 +38,7 @@ public sealed class WellnessAnalyticsService(
         var waterByDate = waterLogs.GroupBy(log => log.Date)
             .ToDictionary(group => group.Key, group => new WaterDay(
                 group.Sum(log => (long)log.AmountMl),
-                group.OrderByDescending(log => log.LoggedAt).First().DailyGoalMl));
+                currentWaterGoalMl));
         var sleepByDate = sleepLogs.GroupBy(log => log.Date)
             .ToDictionary(group => group.Key, group => (int?)group.Average(log => log.DurationMinutes));
         var activityByDate = activityLogs.GroupBy(log => log.Date)
@@ -51,7 +56,7 @@ public sealed class WellnessAnalyticsService(
                     date,
                     moodByDate.TryGetValue(date, out var mood) ? mood : null,
                     water?.Consumed ?? 0,
-                    water?.Goal ?? 2000,
+                    water?.Goal ?? currentWaterGoalMl,
                     sleepByDate.GetValueOrDefault(date),
                     activity is not null,
                     activity?.Minutes ?? 0,

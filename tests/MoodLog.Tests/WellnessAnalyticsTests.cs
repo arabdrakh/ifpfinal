@@ -140,6 +140,15 @@ public class WellnessAnalyticsTests
         public WellnessAnalyticsService CreateService() =>
             new(this, this, this, this);
 
+        Task<MoodEntry?> IMoodEntryRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        Task<bool> IMoodEntryRepository.UpdateAsync(MoodEntry entry, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        Task<bool> IMoodEntryRepository.DeleteAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         Task IMoodEntryRepository.AddAsync(MoodEntry entry, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
@@ -154,6 +163,15 @@ public class WellnessAnalyticsTests
             CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<MoodEntry>>(
                 Moods.Where(entry => entry.Date >= startDate && entry.Date <= endDate).ToArray());
+
+        Task<WaterLog?> IWaterLogRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        Task<bool> IWaterLogRepository.UpdateAsync(WaterLog entry, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        Task<bool> IWaterLogRepository.DeleteAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
 
         Task IWaterLogRepository.AddAsync(WaterLog log, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
@@ -170,6 +188,15 @@ public class WellnessAnalyticsTests
             Task.FromResult<IReadOnlyList<WaterLog>>(
                 Water.Where(log => log.Date >= startDate && log.Date <= endDate).ToArray());
 
+        Task<SleepLog?> ISleepLogRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        Task<bool> ISleepLogRepository.UpdateAsync(SleepLog entry, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        Task<bool> ISleepLogRepository.DeleteAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         Task ISleepLogRepository.AddAsync(SleepLog log, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
@@ -184,6 +211,15 @@ public class WellnessAnalyticsTests
             CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<SleepLog>>(
                 Sleep.Where(log => log.Date >= startDate && log.Date <= endDate).ToArray());
+
+        Task<ActivityLog?> IActivityLogRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        Task<bool> IActivityLogRepository.UpdateAsync(ActivityLog entry, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        Task<bool> IActivityLogRepository.DeleteAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
 
         Task IActivityLogRepository.AddAsync(ActivityLog log, CancellationToken cancellationToken) =>
             throw new NotSupportedException();

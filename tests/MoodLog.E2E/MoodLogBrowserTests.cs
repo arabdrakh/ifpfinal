@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 
 namespace MoodLog.E2E;
@@ -11,7 +12,7 @@ public sealed class MoodLogBrowserTests(MoodLogWebFixture fixture) : IClassFixtu
     [Fact]
     public async Task MoodCheckIn_ShouldSaveAndRemainVisibleAfterReload()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { AcceptDownloads = true });
         var page = await context.NewPageAsync();
         await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/mood");
 
@@ -33,12 +34,28 @@ public sealed class MoodLogBrowserTests(MoodLogWebFixture fixture) : IClassFixtu
 
         await Assertions.Expect(page.Locator(".mood-entry"))
             .ToContainTextAsync(note);
+
+        await page.GetByRole(AriaRole.Button, new() { Name = "Edit mood entry" }).ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Save changes" }))
+            .ToBeVisibleAsync();
+        await page.Locator("#entry-note").FillAsync("Updated browser check-in");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Save changes" }).ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Status))
+            .ToHaveTextAsync("Your check-in has been updated.");
+        await page.ReloadAsync();
+        await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/mood");
+        await Assertions.Expect(page.Locator(".mood-entry"))
+            .ToContainTextAsync("Updated browser check-in");
+
+        page.Dialog += async (_, dialog) => await dialog.AcceptAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Delete mood entry" }).ClickAsync();
+        await Assertions.Expect(page.Locator(".mood-entry")).ToHaveCountAsync(0);
     }
 
     [Fact]
     public async Task ProfileSettings_ShouldUpdateDashboardGreeting()
     {
-        await using var context = await fixture.Browser.NewContextAsync();
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { AcceptDownloads = true });
         var page = await context.NewPageAsync();
         var displayName = $"E2E-{Guid.NewGuid():N}";
 
@@ -55,8 +72,127 @@ public sealed class MoodLogBrowserTests(MoodLogWebFixture fixture) : IClassFixtu
             .ToContainTextAsync(displayName);
     }
 
-    private static Task<IResponse?> NavigateAndWaitForInteractiveAsync(IPage page, string url) =>
-        page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+    [Fact]
+    public async Task WaterEntry_ShouldEditDeleteAndUseUpdatedProfileGoal()
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { AcceptDownloads = true });
+        var page = await context.NewPageAsync();
+        await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/profile");
+        await page.Locator("#profile-water-goal").FillAsync("3200");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Save settings" }).ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Status))
+            .ToHaveTextAsync("Your profile and goals have been saved.");
+
+        await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/water");
+        await Assertions.Expect(page.Locator(".water-goal")).ToContainTextAsync("3200 ml");
+        await page.Locator("#water-amount").FillAsync("250");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Add to daily total" }).ClickAsync();
+        await Assertions.Expect(page.Locator(".water-total strong")).ToHaveTextAsync("250");
+
+        await page.GetByRole(AriaRole.Button, new() { Name = "Edit water entry" }).ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Save changes" }))
+            .ToBeVisibleAsync();
+        await page.Locator("#water-amount").FillAsync("400");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Save changes" }).ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Status))
+            .ToHaveTextAsync("Water entry updated.");
+        await page.ReloadAsync();
+        await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/water");
+        await Assertions.Expect(page.Locator(".water-total strong")).ToHaveTextAsync("400");
+
+        // Regression: changing the goal AFTER logging must update every screen.
+        await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/profile");
+        await page.Locator("#profile-water-goal").FillAsync("4200");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Save settings" }).ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Status))
+            .ToHaveTextAsync("Your profile and goals have been saved.");
+        await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/water");
+        await Assertions.Expect(page.Locator(".water-goal")).ToContainTextAsync("4200 ml");
+        await Assertions.Expect(page.Locator(".water-total strong")).ToHaveTextAsync("400");
+        await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/analytics");
+        await Assertions.Expect(page.Locator(".analytics-stat").Nth(1)).ToContainTextAsync("400 ml");
+        await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/water");
+
+        page.Dialog += async (_, dialog) => await dialog.AcceptAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Delete water entry" }).ClickAsync();
+        await Assertions.Expect(page.Locator(".water-log-list li")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.Locator(".water-total strong")).ToHaveTextAsync("0");
+    }
+
+    [Fact]
+    public async Task SleepAndActivity_ShouldSaveAndDisplayHistory()
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { AcceptDownloads = true });
+        var page = await context.NewPageAsync();
+        await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/sleep");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Save sleep" }).ClickAsync();
+        await Assertions.Expect(page.Locator(".tracker-list li")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.Locator(".tracker-list li")).ToContainTextAsync("8h 30m");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Edit sleep entry" }).ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Save changes" }))
+            .ToBeVisibleAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Save changes" }).ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Status)).ToHaveTextAsync("Sleep entry updated.");
+        page.Dialog += async (_, dialog) => await dialog.AcceptAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Delete sleep entry" }).ClickAsync();
+        await Assertions.Expect(page.Locator(".tracker-list li")).ToHaveCountAsync(0);
+
+        await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/activity");
+        await page.Locator("#activity-duration").FillAsync("40");
+        await page.Locator("#activity-steps").FillAsync("2500");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Save activity" }).ClickAsync();
+        await Assertions.Expect(page.Locator(".tracker-list li")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.Locator(".activity-summary"))
+            .ToContainTextAsync(new Regex(@"2\s500"));
+        await page.GetByRole(AriaRole.Button, new() { Name = "Edit activity entry" }).ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Button, new() { Name = "Save changes" }))
+            .ToBeVisibleAsync();
+        await page.Locator("#activity-duration").FillAsync("50");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Save changes" }).ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Status)).ToHaveTextAsync("Activity updated.");
+        await Assertions.Expect(page.Locator(".activity-summary")).ToContainTextAsync("50");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Delete activity entry" }).ClickAsync();
+        await Assertions.Expect(page.Locator(".tracker-list li")).ToHaveCountAsync(0);
+    }
+
+    [Fact]
+    public async Task Analytics_ShouldSwitchPeriodAndExportCsv()
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions { AcceptDownloads = true });
+        var page = await context.NewPageAsync();
+        await NavigateAndWaitForInteractiveAsync(page, $"{fixture.BaseUrl}/analytics");
+        await page.Locator("#analytics-period").SelectOptionAsync("30");
+        await Assertions.Expect(page.Locator(".chart-column").First)
+            .ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator(".chart-card").First.Locator(".chart-column"))
+            .ToHaveCountAsync(30);
+
+        var download = await page.RunAndWaitForDownloadAsync(async () =>
+            await page.GetByRole(AriaRole.Button, new() { Name = "Download CSV" }).ClickAsync());
+        Assert.EndsWith(".csv", download.SuggestedFilename);
+        var csvPath = Path.Combine(Path.GetTempPath(), $"moodlog-{Guid.NewGuid():N}.csv");
+        try
+        {
+            await download.SaveAsAsync(csvPath);
+            var csv = await File.ReadAllTextAsync(csvPath);
+            var rows = csv.TrimStart('\uFEFF').Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            Assert.Equal(31, rows.Length); // header + 30 daily rows
+            Assert.StartsWith("Date,Mood (1-5),Water (ml),Water goal (ml)", rows[0]);
+        }
+        finally
+        {
+            if (File.Exists(csvPath)) File.Delete(csvPath);
+        }
+        await Assertions.Expect(page.GetByRole(AriaRole.Status))
+            .ToHaveTextAsync("Your report is ready to download.");
+    }
+
+    private static async Task NavigateAndWaitForInteractiveAsync(IPage page, string url)
+    {
+        await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        await Assertions.Expect(page.Locator(".page[data-interactive='true']"))
+            .ToBeVisibleAsync();
+    }
 }
 
 public sealed class MoodLogWebFixture : IAsyncLifetime
@@ -83,6 +219,9 @@ public sealed class MoodLogWebFixture : IAsyncLifetime
             "src",
             "MoodLog.Web",
             "MoodLog.Web.csproj");
+        var testConfiguration = new DirectoryInfo(AppContext.BaseDirectory)
+            .Parent?.Name
+            ?? throw new InvalidOperationException("Could not determine the E2E test configuration.");
         var processInfo = new ProcessStartInfo("dotnet")
         {
             WorkingDirectory = repositoryRoot,
@@ -92,6 +231,8 @@ public sealed class MoodLogWebFixture : IAsyncLifetime
             CreateNoWindow = true
         };
         processInfo.ArgumentList.Add("run");
+        processInfo.ArgumentList.Add("--configuration");
+        processInfo.ArgumentList.Add(testConfiguration);
         processInfo.ArgumentList.Add("--no-build");
         processInfo.ArgumentList.Add("--no-launch-profile");
         processInfo.ArgumentList.Add("--project");
@@ -139,7 +280,18 @@ public sealed class MoodLogWebFixture : IAsyncLifetime
 
         if (Directory.Exists(_databaseDirectory))
         {
-            Directory.Delete(_databaseDirectory, recursive: true);
+            for (var attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    Directory.Delete(_databaseDirectory, recursive: true);
+                    break;
+                }
+                catch (IOException) when (attempt < 5)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(100 * (attempt + 1)));
+                }
+            }
         }
     }
 

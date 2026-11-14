@@ -61,8 +61,33 @@ public class WaterTrackerServiceTests
         Assert.True(progress.GoalReached);
     }
 
+    [Fact]
+    public async Task GetDailyProgressAsync_ShouldUseCurrentProfileGoalNotOldLogGoal()
+    {
+        var repository = new TestWaterLogRepository();
+        var date = new DateOnly(2026, 11, 13);
+        repository.Logs.Add(WaterLog.Create(date, 250, 2000).Value);
+        var progress = await new WaterTrackerService(repository).GetDailyProgressAsync(date, 3200);
+        Assert.Equal(3200, progress.DailyGoalMl);
+        Assert.Equal(2950, progress.RemainingMl);
+    }
+
     private sealed class TestWaterLogRepository : IWaterLogRepository
     {
+        public Task<WaterLog?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Logs.FirstOrDefault(item => item.Id == id));
+
+        public Task<bool> UpdateAsync(WaterLog item, CancellationToken cancellationToken = default)
+        {
+            var index = Logs.FindIndex(old => old.Id == item.Id);
+            if (index == -1) return Task.FromResult(false);
+            Logs[index] = item;
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Logs.RemoveAll(item => item.Id == id) > 0);
+
         public List<WaterLog> Logs { get; } = [];
 
         public Task AddAsync(WaterLog log, CancellationToken cancellationToken = default)
