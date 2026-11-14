@@ -101,18 +101,6 @@ The application separates core wellness logic from database access and the web i
 - **Infrastructure** implements the repositories with Entity Framework Core and SQLite.
 - **Web** provides the interactive Blazor interface and connects the services to the pages.
 
-## Presentation and detailed documentation
-
-- [`presentation/MoodLog_Final_Presentation.pptx`](presentation/MoodLog_Final_Presentation.pptx) — editable slides including goals, relevance, technology comparison, architecture, methodology, interface, FP, testing and conclusions.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Mermaid architecture and flow diagrams, alternatives, architectural trade-offs, data and state management.
-- [`docs/DEFENSE.md`](docs/DEFENSE.md) — suggested live-demo sequence and likely defense questions.
-- [`docs/QA_CHECKLIST.md`](docs/QA_CHECKLIST.md) — manual release acceptance checklist; tests must be executed and results recorded.
-- [`docs/RELEASE_NOTES.md`](docs/RELEASE_NOTES.md) — changes, backward compatibility and limitations.
-- [`docs/RUBRIC_MAPPING.md`](docs/RUBRIC_MAPPING.md) — cross-reference to all 20 grading criteria.
-- [`docs/RECHECK_REPORT.md`](docs/RECHECK_REPORT.md) — independent second audit, corrections, remaining risks, and verification status.
-
-**Verification note:** The supplied revision passed a Windows .NET 10 Release build and automated unit/integration/browser tests. Manual cross-platform checks are still outstanding. The screenshots below show the previous visual baseline, not the new editing controls; retake them after reviewing the updated interface.
-
 ## Data and privacy
 
 MoodLog stores data in a SQLite file on the computer where the application runs. The current version does not include user accounts, cloud sync, or remote storage. Do not share the database file if it contains information you want to keep private.
